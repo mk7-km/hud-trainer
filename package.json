@@ -1,6 +1,6 @@
 {
   "name": "hud-trainer",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "description": "Persönliche Trainings-PWA im HUD-Stil",
   "type": "module",

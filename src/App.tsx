@@ -3,7 +3,7 @@ import { useRegisterSW } from 'virtual:pwa-register/react'
 import { say } from './content/jarvis'
 import type { Plan } from './domain/plan'
 import { setSoundEnabled, unlockAudio } from './platform/audio'
-import { setVoiceEnabled, speak, unlockVoice } from './platform/voice'
+import { setVoiceEnabled, unlockVoice } from './platform/voice'
 import { Boot } from './screens/Boot'
 import { Home } from './screens/Home'
 import { Mission } from './screens/mission/Mission'
@@ -108,13 +108,15 @@ function Main({ plan }: { plan: Plan }) {
   useEffect(() => {
     const greet = coldStart
     coldStart = false
+    // iOS wertet nur touchend/click als Aktivierung, nicht pointerdown/touchstart.
+    const events = ['touchend', 'click', 'keydown'] as const
     const onGesture = () => {
       unlockAudio()
-      unlockVoice()
-      if (greet) speak(say('greeting'))
+      unlockVoice(greet ? say('greeting') : null)
+      events.forEach((e) => window.removeEventListener(e, onGesture, true))
     }
-    window.addEventListener('pointerdown', onGesture, { once: true })
-    return () => window.removeEventListener('pointerdown', onGesture)
+    events.forEach((e) => window.addEventListener(e, onGesture, true))
+    return () => events.forEach((e) => window.removeEventListener(e, onGesture, true))
   }, [])
 
   const {

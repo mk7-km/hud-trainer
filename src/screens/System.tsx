@@ -7,6 +7,7 @@ import { programStartForWeek } from '../domain/schedule'
 import { useOfflineReady } from '../platform/offline'
 import { requestPersistence, shareJsonFile } from '../platform/share'
 import { isStandalone } from '../platform/standalone'
+import { testVoice } from '../platform/voice'
 import type { Derived } from '../state/derived'
 import { useApp } from '../state/store'
 import { BackupPanel } from '../ui/BackupPanel'
@@ -54,6 +55,7 @@ export function System({ plan, derived }: { plan: Plan; derived: Derived }) {
   const [opDraft, setOpDraft] = useState(settings.opDate ?? '')
   const [weekDraft, setWeekDraft] = useState<number | null>(null)
   const [updateMsg, setUpdateMsg] = useState<string | null>(null)
+  const [voiceMsg, setVoiceMsg] = useState<string | null>(null)
   const [wipeStep, setWipeStep] = useState<0 | 1 | 2>(0)
   const [repairConfirm, setRepairConfirm] = useState(false)
 
@@ -151,6 +153,17 @@ export function System({ plan, derived }: { plan: Plan; derived: Derived }) {
 
       <Panel title="Darstellung und Ton">
         <Toggle label="Stimme" value={settings.voice} onChange={(voice) => void updateSettings({ voice })} />
+        {settings.voice && (
+          <div className={s.stack} style={{ padding: '6px 0 10px' }}>
+            <Button onClick={() => setVoiceMsg(testVoice(say('greeting')))}>Stimme testen</Button>
+            {voiceMsg && (
+              <p className={s.muted} role="status">
+                {voiceMsg} Bleibt es still: Klingelschalter auf laut, Lautstärke hoch, und unter iOS-Einstellungen → Bedienungshilfen →
+                Gesprochene Inhalte → Stimmen → Deutsch eine Stimme laden.
+              </p>
+            )}
+          </div>
+        )}
         <Toggle label="Signaltöne" value={settings.sound} onChange={(sound) => void updateSettings({ sound })} />
         <Toggle label="Boot-Sequenz" value={settings.bootSequence} onChange={(bootSequence) => void updateSettings({ bootSequence })} />
         <Toggle label="Animationen reduzieren" value={settings.reduceMotion} onChange={(reduceMotion) => void updateSettings({ reduceMotion })} />
