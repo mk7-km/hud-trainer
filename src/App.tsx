@@ -1,155 +1,92 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
-import jarvis from './content/jarvis.de.json'
-import { getSettings, patchSettings } from './db/db'
-import { loadPlan, type LoadedPlan } from './db/planLoader'
-import type { Settings } from './domain/types'
-import { requestPersistence } from './platform/share'
-import { isStandalone } from './platform/standalone'
-import { BackupPanel } from './ui/BackupPanel'
+import { say } from './content/jarvis'
+import { Home } from './screens/Home'
+import { Mission } from './screens/mission/Mission'
+import { Onboarding } from './screens/Onboarding'
+import { System } from './screens/System'
+import { useApp } from './state/store'
+import { useUi, type Tab } from './state/ui'
+import { Button } from './ui/controls'
+import s from './screens/screen.module.css'
 import styles from './App.module.css'
 
-// M0/M1: Statusseite. Beweist den Weg vom Code bis zum Home-Bildschirm und die Datensicherung.
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'home', label: 'HOME' },
+  { id: 'system', label: 'SYSTEM' },
+]
+
 export function App() {
-  const [loaded, setLoaded] = useState<LoadedPlan | null>(null)
-  const [settings, setSettings] = useState<Settings | null>(null)
-  const [online, setOnline] = useState(navigator.onLine)
-  const standalone = isStandalone()
+  const ready = useApp((st) => st.ready)
+  const plan = useApp((st) => st.plan)
+  const planError = useApp((st) => st.planError)
+  const planUpdatedTo = useApp((st) => st.planUpdatedTo)
+  const onboardingDone = useApp((st) => st.settings.onboardingDone)
+  const init = useApp((st) => st.init)
+  const refreshToday = useApp((st) => st.refreshToday)
+  const dismissPlanUpdated = useApp((st) => st.dismissPlanUpdated)
+  const tab = useUi((u) => u.tab)
+  const setTab = useUi((u) => u.setTab)
+  const mission = useUi((u) => u.mission)
 
   const {
-    offlineReady: [offlineReady],
     needRefresh: [needRefresh],
     updateServiceWorker,
   } = useRegisterSW()
 
-  const reloadSettings = useCallback(() => {
-    void getSettings().then(setSettings)
-  }, [])
-
   useEffect(() => {
-    let cancelled = false
-    void loadPlan().then((res) => {
-      if (!cancelled) setLoaded(res)
-    })
-    reloadSettings()
-    return () => {
-      cancelled = true
-    }
-  }, [reloadSettings])
+    void init()
+  }, [init])
 
+  // Tageswechsel erkennen, wenn die App aus dem Hintergrund kommt.
   useEffect(() => {
-    const update = () => setOnline(navigator.onLine)
-    window.addEventListener('online', update)
-    window.addEventListener('offline', update)
-    return () => {
-      window.removeEventListener('online', update)
-      window.removeEventListener('offline', update)
-    }
-  }, [])
+    const onVisible = () => document.visibilityState === 'visible' && refreshToday()
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [refreshToday])
 
-  async function protectStorage() {
-    const granted = await requestPersistence()
-    setSettings(await patchSettings({ persistGranted: granted }))
+  if (!ready) return <div className={styles.boot} aria-busy="true" />
+
+  if (!plan) {
+    return (
+      <main className={s.scrollFull}>
+        <h1 className={s.h1}>Trainingsplan fehlt</h1>
+        <p className={s.text}>{planError ?? 'Der Trainingsplan konnte nicht geladen werden.'}</p>
+        <p className={s.muted}>Verbinde das iPhone mit dem Internet und öffne die App erneut.</p>
+        <Button variant="primary" block onClick={() => window.location.reload()}>
+          Erneut laden
+        </Button>
+      </main>
+    )
   }
 
-  const plan = loaded?.plan ?? null
-  const persist = settings?.persistGranted
+  if (!onboardingDone) return <Onboarding />
+  if (mission) return <Mission key={JSON.stringify(mission)} plan={plan} target={mission} />
 
   return (
-    <main className={styles.screen}>
-      <header className={styles.header}>
-        <svg className={styles.reactor} viewBox="0 0 200 200" aria-hidden="true">
-          <circle cx="100" cy="100" r="92" className={styles.ringThin} />
-          <circle cx="100" cy="100" r="80" className={styles.ringSeg} pathLength={4} />
-          <circle cx="100" cy="100" r="58" className={styles.ringThin} />
-          <circle cx="100" cy="100" r="30" className={styles.core} />
-        </svg>
-        <h1 className={styles.title}>J.A.R.V.I.S. Trainer</h1>
-        <p className={styles.line}>{jarvis.greeting[0]}</p>
-      </header>
-
-      <section className={styles.panel} aria-label="Systemstatus">
-        <Row label="App-Version" value={__APP_VERSION__} />
-        <Row
-          label="Trainingsplan"
-          value={
-            loaded === null
-              ? 'lädt …'
-              : plan
-                ? `Version ${plan.planVersion} · ${plan.sessions.length} Einheiten`
-                : 'nicht geladen'
-          }
-          state={loaded !== null && !plan ? 'warn' : 'ok'}
-        />
-        <Row
-          label="Startmodus"
-          value={standalone ? 'Vollbild (Home-Bildschirm)' : 'Browser'}
-          state={standalone ? 'ok' : 'warn'}
-        />
-        <Row
-          label="Offline"
-          value={offlineReady ? 'bereit' : 'wird vorbereitet …'}
-          state={offlineReady ? 'ok' : 'warn'}
-        />
-        <Row label="Netz" value={online ? 'verbunden' : 'getrennt'} />
-        <Row
-          label="Speicherschutz"
-          value={persist === true ? 'aktiv' : persist === false ? 'nicht bestätigt' : 'nicht angefragt'}
-          state={persist === true ? 'ok' : 'warn'}
-        />
-      </section>
-
-      {loaded?.error && (
-        <p className={styles.alert} role="alert">
-          {loaded.error}
-        </p>
-      )}
-
-      <section className={styles.panel} aria-label="Datensicherung">
-        <h2 className={styles.h2}>Datensicherung</h2>
-        {persist !== true && (
-          <button className={styles.button} onClick={() => void protectStorage()}>
-            Speicherschutz anfragen
-          </button>
-        )}
-        {persist === false && <p className={styles.hint}>{jarvis.storageWarning[0]}</p>}
-        <BackupPanel
-          planVersion={plan?.planVersion ?? null}
-          lastBackupAt={settings?.lastBackupAt ?? null}
-          onChanged={reloadSettings}
-        />
-      </section>
-
-      {!standalone && (
-        <section className={styles.panel}>
-          <h2 className={styles.h2}>Zum Home-Bildschirm hinzufügen</h2>
-          <ol className={styles.steps}>
-            <li>In Safari unten auf „Teilen“ tippen (Quadrat mit Pfeil nach oben).</li>
-            <li>Nach unten blättern und „Zum Home-Bildschirm“ wählen.</li>
-            <li>Mit „Hinzufügen“ bestätigen und die App vom Home-Bildschirm starten.</li>
-          </ol>
-        </section>
-      )}
-
+    <div className={s.shell}>
       {needRefresh && (
-        <div className={styles.update} role="status">
-          <span>{jarvis.updateAvailable[0]}</span>
-          <button className={styles.button} onClick={() => void updateServiceWorker(true)}>
-            Aktualisieren
-          </button>
+        <div className={styles.banner} role="status">
+          <span>{say('updateAvailable')}</span>
+          <Button onClick={() => void updateServiceWorker(true)}>Aktualisieren</Button>
         </div>
       )}
-    </main>
-  )
-}
-
-function Row({ label, value, state }: { label: string; value: string; state?: 'ok' | 'warn' }) {
-  return (
-    <div className={styles.row}>
-      <span className={styles.label}>{label}</span>
-      <span className={`${styles.value} num`} data-state={state}>
-        {value}
-      </span>
+      {planUpdatedTo && (
+        <div className={styles.banner} role="status">
+          <span>{say('planUpdated', { version: planUpdatedTo })}</span>
+          <Button variant="quiet" onClick={dismissPlanUpdated}>
+            Schließen
+          </Button>
+        </div>
+      )}
+      {tab === 'home' ? <Home plan={plan} /> : <System plan={plan} />}
+      <nav className={s.tabbar} aria-label="Hauptnavigation">
+        {TABS.map((t) => (
+          <button key={t.id} type="button" className={s.tab} aria-current={tab === t.id ? 'page' : undefined} onClick={() => setTab(t.id)}>
+            {t.label}
+          </button>
+        ))}
+      </nav>
     </div>
   )
 }

@@ -1,0 +1,223 @@
+.btn {
+  min-height: var(--tap);
+  padding: 0 16px;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: 0.03em;
+}
+
+.btn:active:not(:disabled) {
+  background: color-mix(in srgb, var(--cyan) 16%, transparent);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+}
+
+.block {
+  display: block;
+  width: 100%;
+}
+
+.primary {
+  min-height: 56px;
+  border-color: var(--cyan);
+  color: var(--bg-0);
+  background: var(--cyan);
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.primary:active:not(:disabled) {
+  background: var(--ice);
+}
+
+.secondary {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+.danger {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.quiet {
+  border-color: transparent;
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 15px;
+  letter-spacing: 0;
+}
+
+.panel {
+  position: relative;
+  background: color-mix(in srgb, var(--bg-1) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  padding: 14px 16px;
+}
+
+.panel[data-tone='warn'] {
+  border-color: var(--amber);
+}
+
+.panel[data-tone='alarm'] {
+  border-color: var(--red);
+}
+
+.panel[data-tone='active'] {
+  border-color: var(--cyan);
+}
+
+.panelTitle {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.seg {
+  display: flex;
+  gap: 6px;
+}
+
+.segBtn {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: var(--tap);
+  padding: 0 4px;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.segBtn[aria-checked='true'] {
+  border-color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 20%, transparent);
+  color: var(--ice);
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: 76px 1fr 76px;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.stepBtn {
+  min-height: 60px;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--cyan);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.stepBtn:active {
+  background: color-mix(in srgb, var(--cyan) 16%, transparent);
+}
+
+.stepField {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+  padding: 2px 4px;
+}
+
+.stepLabel {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.stepValue {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.stepInput {
+  width: 5ch;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  padding: 0;
+  text-align: right;
+  color: var(--ice);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 30px;
+  line-height: 1.1;
+}
+
+.stepInput:focus {
+  color: #fff;
+}
+
+.stepUnit {
+  color: var(--muted);
+  font-size: 15px;
+  min-width: 3ch;
+}
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(2 6 10 / 0.86);
+}
+
+.dialog {
+  width: 100%;
+  max-width: 420px;
+  max-height: 100%;
+  overflow-y: auto;
+  background: var(--bg-1);
+  border: 1px solid var(--cyan);
+  padding: 20px 16px 16px;
+}
+
+.dialogBody {
+  font-size: 16px;
+}
+
+.dialogBody p {
+  margin: 0 0 12px;
+}
+
+.dialogActions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.jarvis {
+  margin: 0;
+  color: var(--ice);
+  font-size: 16px;
+  line-height: 1.4;
+}
