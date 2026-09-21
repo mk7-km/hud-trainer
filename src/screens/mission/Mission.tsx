@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react'
 import { say } from '../../content/jarvis'
 import type { KneeAnswers } from '../../domain/knee'
 import type { Plan } from '../../domain/plan'
-import { completionRatio } from '../../domain/scoring'
+import { completionLine } from '../../domain/homeLine'
+import { completionRatio, streaks } from '../../domain/scoring'
+import { rightRecords } from '../../domain/strength'
 import { dayContext } from '../../domain/schedule'
 import type { SessionLog } from '../../domain/types'
 import { useWakeLock } from '../../platform/wakeLock'
@@ -153,11 +155,18 @@ export function Mission({ plan, target }: { plan: Plan; target: MissionTarget })
   const finish = async () => {
     const ratio = currentRatio()
     const finished = await finishSession(plan, session)
-    setLine(
-      finished.status === 'completed'
-        ? say('missionComplete', { pct: Math.round(ratio * 100) })
-        : say('sessionAborted'),
+    const st = useApp.getState()
+    const done = st.sessions.filter((x) => x.status === 'completed')
+    const record = rightRecords(plan, st.sets, done).get(finished.id)?.[0]
+    const choice = completionLine(
+      plan,
+      st.sessions,
+      finished,
+      streaks(plan, st.sessions, st.settings, st.today).current,
+      record ? { exercise: plan.exercises[record.exerciseId]?.name ?? record.exerciseId, kg: Math.round(record.e1rm) } : null,
+      Math.round(ratio * 100),
     )
+    setLine(say(choice.key, choice.vars))
     setConfirmFinish(false)
     setPhase('summary')
   }

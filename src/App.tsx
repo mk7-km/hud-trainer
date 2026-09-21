@@ -5,6 +5,7 @@ import type { Plan } from './domain/plan'
 import { Home } from './screens/Home'
 import { Mission } from './screens/mission/Mission'
 import { Onboarding } from './screens/Onboarding'
+import { MarkUpOverlay, OpDoneDialog } from './screens/Overlays'
 import { Status } from './screens/Status'
 import { System } from './screens/System'
 import { Week } from './screens/Week'
@@ -68,8 +69,13 @@ function Main({ plan }: { plan: Plan }) {
   const tab = useUi((u) => u.tab)
   const setTab = useUi((u) => u.setTab)
   const mission = useUi((u) => u.mission)
+  const reduceMotion = useApp((st) => st.settings.reduceMotion)
   const derived = useDerived(plan)
   useMarkSync(plan, derived)
+
+  useEffect(() => {
+    document.documentElement.dataset.reduceMotion = String(reduceMotion)
+  }, [reduceMotion])
 
   const {
     needRefresh: [needRefresh],
@@ -94,7 +100,7 @@ function Main({ plan }: { plan: Plan }) {
           </Button>
         </div>
       )}
-      {tab === 'home' && <Home plan={plan} derived={derived} />}
+      {tab === 'home' && <Home plan={plan} derived={derived} draw={false} />}
       {tab === 'week' && <Week plan={plan} derived={derived} />}
       {tab === 'status' && <Status plan={plan} derived={derived} />}
       {tab === 'system' && <System plan={plan} derived={derived} />}
@@ -106,6 +112,8 @@ function Main({ plan }: { plan: Plan }) {
         ))}
       </nav>
       <TooSoonDialog plan={plan} />
+      <OpDoneDialog plan={plan} derived={derived} />
+      <MarkUpOverlay />
     </div>
   )
 }

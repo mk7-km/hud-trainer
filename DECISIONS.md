@@ -24,6 +24,15 @@
 - **Einrichtung auf neuem Gerät:** Das Onboarding bietet „Backup einspielen“ an. Außerdem warnt es, die App erst vom Home-Bildschirm aus einzurichten, weil iOS Safari- und Home-Bildschirm-Daten trennt.
 - **Entwickler-Seed** (`src/dev/seedData.ts`) erzeugt ein Backup-Objekt. Im Dev-Modus per Knopf in SYSTEM, in Playwright über den normalen Import. Im Produktionsbuild ist er nicht enthalten (dynamischer Import hinter `import.meta.env.DEV`).
 
+## Spielsystem und Hinweise
+
+- **Eine J.A.R.V.I.S.-Zeile auf HOME, nach Dringlichkeit** (`src/domain/homeLine.ts`): Reparaturmodus/Ruhetag → Backup überfällig → Gewicht fällt zu schnell → Montag/Dienstag die Bilanz der Vorwoche (solange in der neuen Woche nichts erledigt ist) → Inaktivität → Taper/Kalibrierung/Deload → fehlende Wägungen → OP-Countdown (ab 30 Tagen, wenn das Wochenziel steht) → Wochenstand. Die Hinweise darunter sind nüchterner App-Text, keine zweite J.A.R.V.I.S.-Zeile.
+- **Schwellen ohne Vorgabe im Plan:** Inaktivität ab 4 Tagen ohne Einheit, Wägungs-Erinnerung ab Donnerstag, Backup-Warnung nach 7 Tagen (Auftrag) bzw. sobald Daten ohne jedes Backup vorliegen.
+- **Nach einer Einheit:** Wochenereignis (perfekte Woche, Wochenziel erreicht) vor neuem Bestwert rechts vor der Standardzeile.
+- **Reparaturmodus:** friert Serie, Symmetrie und Marks auf den Stichtag ein (`asOf` in `src/state/derived.ts`), keine Mahnungen außer Backup. Er endet, wenn ein Plan mit anderer `phase.id` geladen ist und ein neuer Programmstart bestätigt wird; dabei wird der OP-Termin geleert.
+- **„OP erfolgt?“** wird je OP-Datum einmal gefragt. „Nein“ führt zu SYSTEM, um den Termin zu ändern; bis dahin bleiben Einheiten gesperrt.
+- **Marks nach einem Import** werden aus den Logs neu erreicht, falls das Backup keine enthält; der Aufstieg wird dann einmal angezeigt.
+
 ## Auslegung des Datenmodells (plan.json)
 
 Wo der Plan Spielraum lässt, gilt bis zu einer Klärung mit der Physiotherapeutin die jeweils vorsichtigere Lesart.

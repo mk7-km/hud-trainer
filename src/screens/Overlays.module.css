@@ -1,0 +1,123 @@
+.markUp {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: calc(var(--safe-top) + 24px) 24px calc(var(--safe-bottom) + 24px);
+  background: var(--bg-0);
+  text-align: center;
+  animation: fade 300ms ease-out backwards;
+}
+
+.rings {
+  position: absolute;
+  width: min(120vw, 560px);
+  pointer-events: none;
+}
+
+.ringA,
+.ringB,
+.ringC {
+  fill: none;
+  stroke: var(--cyan);
+  transform-origin: 150px 150px;
+  transform-box: view-box;
+  animation: expand 1400ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+.ringA {
+  stroke-width: 1;
+  stroke-dasharray: 4 10;
+  opacity: 0.5;
+}
+
+.ringB {
+  stroke-width: 6;
+  stroke-dasharray: 150 35;
+  opacity: 0.35;
+  animation-delay: 120ms;
+}
+
+.ringC {
+  stroke-width: 1.5;
+  opacity: 0.7;
+  animation-delay: 240ms;
+}
+
+.markBody {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: lift 700ms 500ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+.markKicker {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+
+.markName {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 64px;
+  line-height: 1;
+  color: var(--ice);
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--cyan) 60%, transparent));
+}
+
+.markTitle {
+  margin: 0 0 14px;
+  font-size: 18px;
+  color: var(--muted);
+}
+
+.markAction {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: calc(var(--safe-bottom) + 24px);
+  animation: fade 400ms 1100ms ease-out backwards;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes lift {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes expand {
+  from {
+    opacity: 0;
+    transform: scale(0.4) rotate(-90deg);
+  }
+}
+
+:global(html[data-reduce-motion='true']) .markUp *,
+:global(html[data-reduce-motion='true']) .markUp {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .markUp,
+  .markUp * {
+    animation: none !important;
+  }
+}

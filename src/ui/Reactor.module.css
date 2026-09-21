@@ -1,0 +1,172 @@
+.wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.svg {
+  width: min(78vw, 300px);
+  height: auto;
+  overflow: visible;
+}
+
+.hair {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1;
+  opacity: 0.8;
+}
+
+.tick,
+.tickLong {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.tickLong {
+  stroke: var(--cyan);
+  opacity: 0.8;
+}
+
+.dashed {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1;
+  stroke-dasharray: 2 6;
+}
+
+.node {
+  fill: var(--cyan);
+}
+
+.pflicht,
+.bonus {
+  fill: none;
+  stroke: var(--line);
+  opacity: 0.45;
+  transition:
+    stroke 400ms ease,
+    opacity 400ms ease;
+}
+
+.pflicht {
+  stroke-width: 18;
+}
+
+.bonus {
+  stroke-width: 5;
+}
+
+.pflicht[data-on='true'],
+.bonus[data-on='true'] {
+  stroke: var(--cyan);
+  opacity: 1;
+}
+
+.bonus[data-on='true'] {
+  stroke: var(--ice);
+}
+
+.core {
+  fill: var(--bg-1);
+}
+
+.coreRing {
+  fill: none;
+  stroke: var(--cyan);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 6px var(--cyan));
+}
+
+.wrap[data-full='true'] .coreRing {
+  stroke: var(--ice);
+  stroke-width: 2.5;
+}
+
+.count {
+  fill: var(--ice);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 40px;
+}
+
+.pct {
+  fill: var(--muted);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 19px;
+  letter-spacing: 0.06em;
+}
+
+.spinSlow,
+.spinReverse {
+  transform-origin: 150px 150px;
+  transform-box: view-box;
+}
+
+.spinSlow {
+  animation: spin 40s linear infinite;
+}
+
+.spinReverse {
+  animation: spin 32s linear infinite reverse;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Reparaturmodus: alles ruht, gedimmt */
+.wrap[data-paused='true'] .spinSlow,
+.wrap[data-paused='true'] .spinReverse {
+  animation: none;
+}
+
+.wrap[data-paused='true'] .svg {
+  opacity: 0.55;
+}
+
+/* Aufzeichnen nach dem Boot: Ringe und Segmente blenden gestaffelt ein (nur opacity/transform) */
+.wrap[data-draw='true'] .pflicht,
+.wrap[data-draw='true'] .bonus {
+  animation: appear 420ms ease-out backwards;
+  animation-delay: calc(300ms + var(--i, 0) * 110ms);
+}
+
+.wrap[data-draw='true'] .svg {
+  animation: rise 700ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: scale(0.86) rotate(-24deg);
+  }
+}
+
+:global(html[data-reduce-motion='true']) .spinSlow,
+:global(html[data-reduce-motion='true']) .spinReverse,
+:global(html[data-reduce-motion='true']) .pflicht,
+:global(html[data-reduce-motion='true']) .bonus,
+:global(html[data-reduce-motion='true']) .svg {
+  animation: none !important;
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinSlow,
+  .spinReverse,
+  .pflicht,
+  .bonus,
+  .svg {
+    animation: none !important;
+    transition: none !important;
+  }
+}

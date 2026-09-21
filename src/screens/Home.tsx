@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { say } from '../content/jarvis'
-import { formatDateDe } from '../domain/dates'
+import { useMemo, useState } from 'react'
+import { addDays, formatDateDe, suggestProgramStart } from '../domain/dates'
+import { homeLine, homeWarnings, type HomeInput, type Warning } from '../domain/homeLine'
 import type { Plan } from '../domain/plan'
 import type { DayContext } from '../domain/schedule'
 import type { Derived } from '../state/derived'
@@ -8,8 +8,9 @@ import { finishSession } from '../state/mission'
 import { requestStart } from '../state/start'
 import { useApp } from '../state/store'
 import { useUi } from '../state/ui'
-import { Button, Dialog, JarvisLine, Panel } from '../ui/controls'
+import { Button, Dialog, JarvisLine, Panel, Seg } from '../ui/controls'
 import { formatInt, formatPct } from '../ui/format'
+import { Reactor } from '../ui/Reactor'
 import { useLine } from '../ui/useLine'
 import s from './screen.module.css'
 import m from './mission/mission.module.css'
@@ -25,56 +26,107 @@ export function opLabel(ctx: DayContext): string {
   return ctx.daysToOp === null ? 'OP offen' : ctx.daysToOp > 0 ? `OP in ${ctx.daysToOp} T` : 'OP erreicht'
 }
 
-export function Home({ plan, derived }: { plan: Plan; derived: Derived }) {
+function warningText(plan: Plan, w: Warning): string {
+  switch (w.kind) {
+    case 'backupOverdue':
+      return w.days === undefined ? 'Noch kein Backup gesichert.' : `Letztes Backup vor ${w.days} Tagen.`
+    case 'storage':
+      return 'Speicherschutz nicht bestätigt. Backups sind umso wichtiger.'
+    case 'weighInMissing':
+      return `Wägungen diese Woche: ${w.done} von ${plan.bodyweight.weighInsPerWeekMin}.`
+    case 'weightLossTooFast':
+      return 'Das Gewicht fällt seit zwei Wochen zu schnell.'
+    case 'inactivity':
+      return `Seit ${w.days} Tagen keine Einheit.`
+  }
+}
+
+export function Home({ plan, derived, draw }: { plan: Plan; derived: Derived; draw: boolean }) {
   const settings = useApp((st) => st.settings)
   const sessions = useApp((st) => st.sessions)
+  const bodyweight = useApp((st) => st.bodyweight)
   const kneeChecks = useApp((st) => st.kneeChecks)
+  const today = useApp((st) => st.today)
+  const updateSettings = useApp((st) => st.updateSettings)
   const openMission = useUi((u) => u.openMission)
+  const setTab = useUi((u) => u.setTab)
   const [discard, setDiscard] = useState(false)
+  const [newStart, setNewStart] = useState(() => suggestProgramStart(today))
 
-  const { ctx, week } = derived
+  const { ctx, week, streak } = derived
+  const input: HomeInput = useMemo(
+    () => ({ plan, ctx, week, streak, settings, sessions, bodyweight, today, now: Date.now() }),
+    [plan, ctx, week, streak, settings, sessions, bodyweight, today],
+  )
+  const warnings = useMemo(() => homeWarnings(input), [input])
+  const choice = useMemo(() => homeLine(input), [input])
+  const line = useLine(choice.key, choice.vars)
+
   const active = sessions.find((x) => x.status === 'active') ?? null
   const ordered = [...plan.sessions].sort((a, b) => a.order - b.order)
   const recommended = ordered.find((t) => !week.fulfilled.has(t.id)) ?? null
-  const repairLine = useLine('repairMode')
   const lastKnee = kneeChecks.reduce<(typeof kneeChecks)[number] | null>((a, b) => (!a || b.at > a.at ? b : a), null)
   const mark = plan.marks.find((x) => x.level === derived.reachedLevel)
   const backupDays = settings.lastBackupAt === null ? null : Math.floor((Date.now() - settings.lastBackupAt) / 86_400_000)
+
+  const repair = settings.repairMode
+  // Reparaturmodus endet, wenn ein Plan mit anderer phase.id geladen ist und ein neuer Programmstart bestätigt wird.
+  const newPhaseReady = repair && settings.repairPhaseId !== null && settings.repairPhaseId !== plan.phase.id
+  const starts = [suggestProgramStart(today), addDays(suggestProgramStart(today), 7)]
 
   const lockText =
     ctx.locked === 'notStarted' && settings.programStart
       ? `Das Programm startet am ${formatDateDe(settings.programStart)}.`
       : ctx.locked === 'restBeforeOp'
-        ? say('restBeforeOp')
+        ? 'Ruhetag vor der OP. Heute ist keine Einheit vorgesehen.'
         : ctx.locked === 'opReached'
           ? 'Der OP-Termin ist erreicht. Einheiten sind gesperrt.'
-          : ctx.locked === 'repair'
-            ? repairLine
-            : null
+          : null
 
   return (
     <main className={s.scroll}>
       <div className={s.rowBetween}>
-        <p className={s.kicker}>{mark ? mark.name : 'Noch keine Mark-Stufe'}</p>
+        <p className={s.kicker}>{mark ? mark.name : 'Mark 0'}</p>
         <p className={s.kicker}>{opLabel(ctx)}</p>
       </div>
-      <h1 className={`${s.h1} num`}>
-        {week.pflichtDone} / {week.pflichtTarget} Pflicht · {week.bonusDone} / {week.bonusTarget} Bonus
-      </h1>
-      <p className={s.muted}>
-        Woche <span className="num">{Math.max(ctx.programWeek, 0)}</span> · Block {ctx.block} · {weekTypeLabel(ctx)}
-      </p>
-      {ctx.weekType === 'calibration' && !ctx.taper && <JarvisLine text={say('calibrationWeek')} />}
-      {ctx.weekType === 'deload' && <JarvisLine text={say('deloadWeek')} />}
-      {ctx.taper && <JarvisLine text={say('taper')} />}
 
-      {lockText && (
+      <Reactor
+        pflichtDone={week.pflichtDone}
+        pflichtTarget={week.pflichtTarget}
+        bonusDone={week.bonusDone}
+        bonusTarget={week.bonusTarget}
+        pct={week.pct}
+        paused={repair}
+        draw={draw}
+      />
+      <p className={s.kicker} style={{ textAlign: 'center' }}>
+        {repair ? 'Reparaturmodus' : `Woche ${Math.max(ctx.programWeek, 0)} · Block ${ctx.block} · ${weekTypeLabel(ctx)}`}
+      </p>
+      <JarvisLine text={line} />
+
+      {newPhaseReady && (
+        <Panel tone="active" title={`Neue Phase: ${plan.phase.name}`}>
+          <div className={s.stack}>
+            <p className={s.text}>Ein neuer Trainingsplan ist geladen. Bestätige den Programmstart, dann endet der Reparaturmodus.</p>
+            <Seg label="Neuer Programmstart" value={newStart} onChange={setNewStart} options={starts.map((d) => ({ value: d, label: `Mo ${formatDateDe(d).slice(0, 6)}` }))} />
+            <Button
+              variant="primary"
+              block
+              onClick={() => void updateSettings({ repairMode: false, repairSince: null, repairPhaseId: null, programStart: newStart, opDate: null, opAskedFor: null })}
+            >
+              Programmstart bestätigen
+            </Button>
+          </div>
+        </Panel>
+      )}
+
+      {lockText && !repair && (
         <Panel tone="warn" title="Gesperrt">
           <p className={s.text}>{lockText}</p>
         </Panel>
       )}
 
-      {active && (
+      {active && !repair && (
         <Panel tone="active" title="Laufende Mission">
           <div className={s.stack}>
             <p className={s.text}>
@@ -109,6 +161,26 @@ export function Home({ plan, derived }: { plan: Plan; derived: Derived }) {
         </Panel>
       )}
 
+      {warnings.length > 0 && (
+        <Panel tone="warn" title="Hinweise">
+          {warnings.map((w) => (
+            <div key={w.kind} className={m.statRow}>
+              <span>{warningText(plan, w)}</span>
+              {(w.kind === 'backupOverdue' || w.kind === 'storage') && (
+                <Button variant="quiet" onClick={() => setTab('system')}>
+                  Zu SYSTEM
+                </Button>
+              )}
+              {w.kind === 'weighInMissing' && (
+                <Button variant="quiet" onClick={() => setTab('status')}>
+                  Zu STATUS
+                </Button>
+              )}
+            </div>
+          ))}
+        </Panel>
+      )}
+
       <Panel title="Lage">
         <div className={m.statRow}>
           <span className={m.statLabel}>Knie</span>
@@ -122,8 +194,10 @@ export function Home({ plan, derived }: { plan: Plan; derived: Derived }) {
           <span className="num">{derived.symmetry.index === null ? 'noch keine Daten' : formatPct(derived.symmetry.index)}</span>
         </div>
         <div className={m.statRow}>
-          <span className={m.statLabel}>Punkte</span>
-          <span className="num">{formatInt(derived.points.total)}</span>
+          <span className={m.statLabel}>Punkte · Serie</span>
+          <span className="num">
+            {formatInt(derived.points.total)} · {streak.current} {streak.current === 1 ? 'Woche' : 'Wochen'}
+          </span>
         </div>
         <div className={m.statRow}>
           <span className={m.statLabel}>Backup</span>

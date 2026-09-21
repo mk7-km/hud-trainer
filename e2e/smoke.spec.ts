@@ -26,8 +26,8 @@ test('Onboarding, komplette Mission, Fortsetzen, Backup – ohne fremde Anfragen
   await page.getByRole('button', { name: 'Einrichtung abschließen' }).click()
 
   // HOME
-  await expect(page.getByText('Kalibrierung')).toBeVisible()
-  await expect(page.getByText('0 / 4 Pflicht')).toBeVisible()
+  await expect(page.getByText(/Woche 1 · Block 1 · Kalibrierung/)).toBeVisible()
+  await expect(page.getByRole('img', { name: /0 von 4 Pflichteinheiten/ })).toBeVisible()
   await shot(page, 'm2-home')
   await page.getByRole('button', { name: 'Mission starten' }).click()
 
@@ -86,7 +86,7 @@ test('Onboarding, komplette Mission, Fortsetzen, Backup – ohne fremde Anfragen
   await expect(page.getByText('+100 Punkte')).toBeVisible()
   await shot(page, 'm2-summary')
   await page.getByRole('button', { name: 'Fertig' }).click()
-  await expect(page.getByText('1 / 4 Pflicht')).toBeVisible()
+  await expect(page.getByRole('img', { name: /1 von 4 Pflichteinheiten/ })).toBeVisible()
 
   // Zweite Beineinheit am selben Tag: 48-Stunden-Warnung
   await page.getByRole('button', { name: 'WOCHE' }).click()

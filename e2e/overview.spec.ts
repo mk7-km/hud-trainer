@@ -33,8 +33,15 @@ test('Übersichten mit Beispieldaten, Korrektur, Löschen und Wiederherstellen',
   await page.goto('./')
   await importSeed(page, file)
 
+  // Mark-Aufstieg nach dem Import (Marks werden aus den Logs neu erreicht)
+  await expect(page.getByRole('alertdialog', { name: /Mark IV erreicht/ })).toBeVisible()
+  await page.waitForTimeout(1600)
+  await shot(page, 'm4-markup')
+  await page.getByRole('button', { name: 'Weiter' }).click()
+
   // HOME
   await expect(page.getByText('Nächste Mission')).toBeVisible()
+  await expect(page.getByRole('img', { name: /2 von 4 Pflichteinheiten/ })).toBeVisible()
   await expect(page.getByText('OP in 64 T')).toBeVisible()
   await shot(page, 'm3-home')
 
