@@ -1,0 +1,73 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.info,
+.message {
+  margin: 0;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.message {
+  color: var(--text);
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.primary,
+.secondary,
+.danger {
+  flex: 1 1 140px;
+  min-height: var(--tap);
+  padding: 0 8px;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.primary {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+.danger {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.primary:active,
+.secondary:active,
+.danger:active {
+  background: color-mix(in srgb, var(--cyan) 14%, transparent);
+}
+
+.actions button:disabled {
+  opacity: 0.5;
+}
+
+.file {
+  display: none;
+}
+
+.confirm {
+  border: 1px solid var(--amber);
+  padding: 12px;
+  font-size: 15px;
+}
+
+.confirm p {
+  margin: 0 0 12px;
+}

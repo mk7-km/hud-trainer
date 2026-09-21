@@ -33,4 +33,10 @@ Wo der Plan Spielraum lässt, gilt bis zu einer Klärung mit der Physiotherapeut
 14. **`newRightLegRecord`:** höchstens einmal je Übung und Einheit, nur Symmetrie-Übungen, nur reguläre Sätze, erst nachdem eine Baseline existiert (sonst wäre jeder erste Satz ein Rekord).
 15. **`calmDaysMin`:** zusammenhängende ruhige Tage bis heute, gezählt frühestens ab Programmstart.
 16. **Serien:** Die laufende Woche bricht eine Serie erst nach Sonntag 23:59. Wochen im Reparaturmodus und die OP-Woche zählen weder positiv noch negativ.
+18. **Schonmodus-Markierung nur bei `reduce20`.** Bei Gelb werden nur Sätze von Übungen mit reduzierter Last als `schonmodus` gespeichert. Oberkörper- und `keep`-Übungen laufen mit vollen Lasten und behalten ihre Progression.
+19. **Ausgesetzte ROT-Einheiten** (`suspended_red`) erfüllen das Wochenziel (und damit den Wochenbonus), bringen selbst aber keine Einheitspunkte. Dieselbe Vorlage zählt pro Woche nur einmal.
+20. **Werte, die nur als Prosa im Plan stehen,** sind im Code als benannte Konstanten bzw. Textauswertung umgesetzt: e1RM nur bis 15 Wiederholungen, Baseline aus Programmwoche 1–2 (`strength.ts`); das Wochenlimit der Technikübungen wird aus dem Text `progression.technique` gelesen („+5 kg“); die Übungen für den Zuwachs rechts sind jene Symmetrie-Übungen, deren ID im Text `symmetry.rightGain` vorkommt.
+21. **Programmwoche korrigieren** verschiebt den Programmstart (immer ein Montag), es gibt keinen zweiten Zähler.
+22. **Taper-Block:** Es gilt der Block vom Tag vor Taper-Beginn.
+23. **`plannedUnits` wird je Sitzung gespeichert** (Schnappschuss wie der Übungsname), weil sich die 80-%-Schwelle nach einem Planwechsel sonst nicht mehr nachvollziehen ließe. Der Status `completed`/`aborted` wird beim Beenden festgelegt.
 17. **`givingWay`-Text „48 Stunden kein Beintraining“** wird nicht als zusätzliche Sperre umgesetzt: Die Frage `givingWay48h` führt ohnehin zu Rot.

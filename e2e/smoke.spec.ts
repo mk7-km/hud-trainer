@@ -18,7 +18,19 @@ test('App startet, lädt den Plan und macht keine fremden Anfragen', async ({ pa
   await expect(page.getByText(/Version \d+\.\d+\.\d+ · \d+ Einheiten/)).toBeVisible()
   await expect(page.getByText('bereit', { exact: true })).toBeVisible({ timeout: 15_000 })
 
-  await page.screenshot({ path: 'e2e/screenshots/m0-status.png' })
+  // Backup: Export als Datei, danach wieder einspielen
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Backup erstellen' }).click(),
+  ])
+  expect(download.suggestedFilename()).toMatch(/^trainer-backup-\d{4}-\d{2}-\d{2}\.json$/)
+  await expect(page.getByText('Backup als Datei heruntergeladen.')).toBeVisible()
+  const file = await download.path()
+  await page.getByLabel('Backup-Datei wählen').setInputFiles(file)
+  await page.getByRole('button', { name: 'Daten ersetzen' }).click()
+  await expect(page.getByText('Backup eingespielt.')).toBeVisible()
+
+  await page.screenshot({ path: 'e2e/screenshots/m1-status.png', fullPage: true })
   expect(foreign).toEqual([])
   expect(errors).toEqual([])
 })

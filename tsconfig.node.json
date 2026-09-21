@@ -1,11 +1,11 @@
-{
+﻿{
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
     "target": "ES2023",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "types": ["node"],
+    "types": ["node", "vite/client"],
     "resolveJsonModule": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
@@ -14,5 +14,5 @@
     "strict": true,
     "noUncheckedIndexedAccess": true
   },
-  "include": ["vite.config.ts", "playwright.config.ts", "e2e", "src/**/*.test.ts"]
+  "include": ["vite.config.ts", "playwright.config.ts", "e2e", "src/**/*.test.ts", "src/**/*.node.ts"]
 }
