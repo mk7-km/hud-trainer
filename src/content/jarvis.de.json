@@ -1,0 +1,127 @@
+{
+  "meta": {
+    "language": "de",
+    "tone": "förmlich, trocken, streng, knapp. Anrede 'Sir'. Keine Emojis, keine Ausrufezeichen-Ketten, kein Lob ohne Leistung.",
+    "placeholders": "{open} offene Pflichteinheiten, {done} erledigte, {days} Tage, {weeks} Wochen in Folge, {mark} Mark-Name, {pct} Prozent, {exercise} Übungsname, {kg} Kilogramm, {hours} Stunden, {version} Plan-Version"
+  },
+  "greeting": [
+    "Systeme online, Sir.",
+    "Willkommen zurück, Sir. Der Plan wartet.",
+    "Alle Systeme bereit. Beginnen wir."
+  ],
+  "homeStatusOpen": [
+    "{open} Pflichteinheiten offen. Frist: Sonntag, Sir.",
+    "Wochenziel: {done} von 4. Es fehlen {open}.",
+    "Der Reaktor steht bei {pct} %. Das genügt nicht, Sir."
+  ],
+  "homeStatusDone": [
+    "Wochenziel erfüllt. Reaktor bei 100 %.",
+    "Pflicht erledigt, Sir. Bonuseinheiten stehen noch offen."
+  ],
+  "inactivity": [
+    "Seit {days} Tagen keine Einheit, Sir. Das Knie baut sich nicht von selbst auf.",
+    "{days} Tage Stillstand. Ich empfehle, das heute zu beenden."
+  ],
+  "missionStart": [
+    "Mission gestartet. Knie-Check zuerst.",
+    "Protokoll läuft. Saubere Technik vor Last, Sir."
+  ],
+  "restEnd": [
+    "Pause beendet.",
+    "Weiter, Sir.",
+    "Nächster Satz."
+  ],
+  "missionComplete": [
+    "Mission abgeschlossen. {pct} % der Sätze protokolliert.",
+    "Einheit erledigt, Sir. Daten gesichert.",
+    "Abgeschlossen. Regeneration ist jetzt Teil des Auftrags."
+  ],
+  "sessionAborted": [
+    "Einheit abgebrochen. Unter 80 % zählt nicht, Sir.",
+    "Unvollständig. Keine Punkte. Wiederholen Sie die Einheit."
+  ],
+  "weekComplete": [
+    "Woche abgeschlossen: 4 von 4. So bleibt es, Sir.",
+    "Wochenziel erreicht. Serie: {weeks} Wochen in Folge."
+  ],
+  "perfectWeek": [
+    "6 von 6. Vollständig, Sir.",
+    "Perfekte Woche. Ich habe nichts zu beanstanden."
+  ],
+  "weekFailed": [
+    "Wochenziel verfehlt: {done} von 4. Serie beendet.",
+    "Reaktor bei {pct} %. Nächste Woche ohne Ausreden, Sir."
+  ],
+  "lowerTooSoon": [
+    "Letzte Beineinheit vor {hours} Stunden. Vorgabe sind 48, Sir.",
+    "Zu früh für die Beine. Oberkörper oder Bonuseinheit wäre die korrekte Wahl."
+  ],
+  "calibrationWeek": [
+    "Kalibrierungswoche: zwei Sätze pro Übung, Lasten finden. Kein Heldentum, Sir."
+  ],
+  "deloadWeek": [
+    "Deload-Woche. Halbe Satzzahl, gleiche Lasten. Auch das ist Pflicht."
+  ],
+  "kneeGreen": [
+    "Knie-Status grün. Plan wie geschrieben."
+  ],
+  "kneeYellow": [
+    "Knie-Status gelb. Schonmodus aktiv: keine Sprünge, keine Step-downs, keine Ausfallschritte, Lasten minus 20 %.",
+    "Schonmodus, Sir. Kein Punkteabzug, aber auch kein Ehrgeiz heute."
+  ],
+  "kneeRed": [
+    "Knie-Status rot. Beintraining gesperrt. Informieren Sie Ihre Physio.",
+    "Rot. Heute nur Oberkörper, Sir. Das ist keine Verhandlungssache."
+  ],
+  "locking": [
+    "Blockade gemeldet. Kontaktieren Sie umgehend Ihren Operateur, Sir."
+  ],
+  "givingWay": [
+    "Wegknicken protokolliert. Melden Sie das Ihrem Operateur, die Meniskusnaht hängt daran.",
+    "Ereignis gespeichert. 48 Stunden kein Beintraining."
+  ],
+  "newRecordRight": [
+    "Neuer Bestwert rechts bei {exercise}: {kg} kg geschätzt. Weiter so, Sir.",
+    "Rechtes Bein: neuer Bestwert. Die Differenz schrumpft."
+  ],
+  "symmetryUpdate": [
+    "Symmetrie aktuell {pct} %. Ziel vor der OP: 90 %."
+  ],
+  "markUp": [
+    "Upgrade abgeschlossen: {mark}.",
+    "{mark} freigeschaltet. Verdient, Sir."
+  ],
+  "backupOverdue": [
+    "Letztes Backup vor {days} Tagen. Sichern Sie Ihre Daten, Sir. Jetzt.",
+    "Kein aktuelles Backup. Ich bestehe darauf."
+  ],
+  "weighInMissing": [
+    "Zu wenige Wägungen diese Woche: {done} von 2, Sir."
+  ],
+  "weightLossTooFast": [
+    "Gewicht fällt zu schnell. Mehr essen, Sir. Muskel vor Fett."
+  ],
+  "opCountdown": [
+    "Noch {days} Tage bis zur OP. Jede Einheit zählt.",
+    "OP in {days} Tagen. Quadrizeps hat Vorrang, Sir."
+  ],
+  "taper": [
+    "Letzte Woche vor der OP: halbes Volumen, nichts Neues. Das Knie geht ruhig in den Eingriff."
+  ],
+  "restBeforeOp": [
+    "Ruhetag vor der OP. Training ist heute gesperrt, Sir."
+  ],
+  "repairMode": [
+    "Anzug in Reparatur. Stufe und Punkte bleiben erhalten. Ich warte auf das Phase-2-Protokoll.",
+    "Reparaturmodus aktiv. Gute Besserung, Sir."
+  ],
+  "updateAvailable": [
+    "Neue Version verfügbar. Aktualisieren, Sir?"
+  ],
+  "planUpdated": [
+    "Neuer Trainingsplan geladen: Version {version}."
+  ],
+  "storageWarning": [
+    "Speicherschutz nicht bestätigt. Regelmäßige Backups sind Pflicht, Sir."
+  ]
+}

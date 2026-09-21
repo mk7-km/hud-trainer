@@ -1,0 +1,13 @@
+node_modules/
+dist/
+dev-dist/
+*.tsbuildinfo
+test-results/
+playwright-report/
+e2e/screenshots/
+.DS_Store
+*.local
+
+# Privater Auftragstext und lokale Werkzeug-Einstellungen: gehören nicht ins öffentliche Repo
+PROMPT.md
+.claude/
