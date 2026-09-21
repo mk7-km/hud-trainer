@@ -1,10 +1,16 @@
 import { useEffect } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { say } from './content/jarvis'
+import type { Plan } from './domain/plan'
 import { Home } from './screens/Home'
 import { Mission } from './screens/mission/Mission'
 import { Onboarding } from './screens/Onboarding'
+import { Status } from './screens/Status'
 import { System } from './screens/System'
+import { Week } from './screens/Week'
+import { useDerived } from './state/derived'
+import { useMarkSync } from './state/marks'
+import { TooSoonDialog } from './state/start'
 import { useApp } from './state/store'
 import { useUi, type Tab } from './state/ui'
 import { Button } from './ui/controls'
@@ -13,6 +19,8 @@ import styles from './App.module.css'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'home', label: 'HOME' },
+  { id: 'week', label: 'WOCHE' },
+  { id: 'status', label: 'STATUS' },
   { id: 'system', label: 'SYSTEM' },
 ]
 
@@ -20,19 +28,9 @@ export function App() {
   const ready = useApp((st) => st.ready)
   const plan = useApp((st) => st.plan)
   const planError = useApp((st) => st.planError)
-  const planUpdatedTo = useApp((st) => st.planUpdatedTo)
   const onboardingDone = useApp((st) => st.settings.onboardingDone)
   const init = useApp((st) => st.init)
   const refreshToday = useApp((st) => st.refreshToday)
-  const dismissPlanUpdated = useApp((st) => st.dismissPlanUpdated)
-  const tab = useUi((u) => u.tab)
-  const setTab = useUi((u) => u.setTab)
-  const mission = useUi((u) => u.mission)
-
-  const {
-    needRefresh: [needRefresh],
-    updateServiceWorker,
-  } = useRegisterSW()
 
   useEffect(() => {
     void init()
@@ -61,6 +59,23 @@ export function App() {
   }
 
   if (!onboardingDone) return <Onboarding />
+  return <Main plan={plan} />
+}
+
+function Main({ plan }: { plan: Plan }) {
+  const planUpdatedTo = useApp((st) => st.planUpdatedTo)
+  const dismissPlanUpdated = useApp((st) => st.dismissPlanUpdated)
+  const tab = useUi((u) => u.tab)
+  const setTab = useUi((u) => u.setTab)
+  const mission = useUi((u) => u.mission)
+  const derived = useDerived(plan)
+  useMarkSync(plan, derived)
+
+  const {
+    needRefresh: [needRefresh],
+    updateServiceWorker,
+  } = useRegisterSW()
+
   if (mission) return <Mission key={JSON.stringify(mission)} plan={plan} target={mission} />
 
   return (
@@ -79,7 +94,10 @@ export function App() {
           </Button>
         </div>
       )}
-      {tab === 'home' ? <Home plan={plan} /> : <System plan={plan} />}
+      {tab === 'home' && <Home plan={plan} derived={derived} />}
+      {tab === 'week' && <Week plan={plan} derived={derived} />}
+      {tab === 'status' && <Status plan={plan} derived={derived} />}
+      {tab === 'system' && <System plan={plan} derived={derived} />}
       <nav className={s.tabbar} aria-label="Hauptnavigation">
         {TABS.map((t) => (
           <button key={t.id} type="button" className={s.tab} aria-current={tab === t.id ? 'page' : undefined} onClick={() => setTab(t.id)}>
@@ -87,6 +105,7 @@ export function App() {
           </button>
         ))}
       </nav>
+      <TooSoonDialog plan={plan} />
     </div>
   )
 }

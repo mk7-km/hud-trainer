@@ -89,6 +89,7 @@ test('Onboarding, komplette Mission, Fortsetzen, Backup – ohne fremde Anfragen
   await expect(page.getByText('1 / 4 Pflicht')).toBeVisible()
 
   // Zweite Beineinheit am selben Tag: 48-Stunden-Warnung
+  await page.getByRole('button', { name: 'WOCHE' }).click()
   await page.getByRole('button', { name: /Unterkörper B.*starten/ }).click()
   await expect(page.getByRole('alertdialog', { name: 'Zu früh für die Beine' })).toBeVisible()
   await shot(page, 'm2-too-soon')

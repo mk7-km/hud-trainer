@@ -10,11 +10,13 @@ interface Props {
   lastBackupAt: number | null
   /** Nach Export oder Import: Daten neu laden. */
   onChanged: () => void
+  /** Nur Import anbieten (Einrichtung auf einem neuen Gerät). */
+  importOnly?: boolean
 }
 
 type Pending = { backup: Backup; summary: BackupSummary }
 
-export function BackupPanel({ planVersion, lastBackupAt, onChanged }: Props) {
+export function BackupPanel({ planVersion, lastBackupAt, onChanged, importOnly = false }: Props) {
   const fileInput = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [pending, setPending] = useState<Pending | null>(null)
@@ -74,14 +76,17 @@ export function BackupPanel({ planVersion, lastBackupAt, onChanged }: Props) {
 
   return (
     <div className={styles.wrap}>
-      <p className={styles.info}>
-        Letztes Backup:{' '}
-        {lastBackupAt ? new Date(lastBackupAt).toLocaleDateString('de-AT') : 'noch keines'}
-      </p>
+      {!importOnly && (
+        <p className={styles.info}>
+          Letztes Backup: {lastBackupAt ? new Date(lastBackupAt).toLocaleDateString('de-AT') : 'noch keines'}
+        </p>
+      )}
       <div className={styles.actions}>
-        <button className={styles.primary} disabled={busy} onClick={() => void createBackup()}>
-          Backup erstellen
-        </button>
+        {!importOnly && (
+          <button className={styles.primary} disabled={busy} onClick={() => void createBackup()}>
+            Backup erstellen
+          </button>
+        )}
         <button className={styles.secondary} disabled={busy} onClick={() => fileInput.current?.click()}>
           Backup einspielen
         </button>

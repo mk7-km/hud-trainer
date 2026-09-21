@@ -3,6 +3,7 @@ import { addDays, formatDateDe, isDateStr, suggestProgramStart } from '../domain
 import { requestPersistence } from '../platform/share'
 import { isStandalone } from '../platform/standalone'
 import { useApp } from '../state/store'
+import { BackupPanel } from '../ui/BackupPanel'
 import { Button, Panel, Seg } from '../ui/controls'
 import { say } from '../content/jarvis'
 import s from './screen.module.css'
@@ -25,6 +26,7 @@ export function InstallHint() {
 export function Onboarding() {
   const today = useApp((st) => st.today)
   const updateSettings = useApp((st) => st.updateSettings)
+  const reload = useApp((st) => st.reload)
   const suggestion = suggestProgramStart(today)
   const starts = [addDays(suggestion, -7), suggestion, addDays(suggestion, 7)]
 
@@ -119,6 +121,11 @@ export function Onboarding() {
             <p className={s.warn}>{say('storageWarning')}</p>
           )}
         </div>
+      </Panel>
+
+      <Panel title="Schon ein Backup vorhanden?">
+        <p className={s.muted}>Auf einem neuen Gerät: Backup einspielen statt neu einrichten.</p>
+        <BackupPanel planVersion={null} lastBackupAt={null} importOnly onChanged={() => void reload()} />
       </Panel>
 
       <Button variant="primary" block disabled={!opValid} onClick={() => void finish()}>

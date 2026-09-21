@@ -9,9 +9,20 @@
 - **Service Worker `registerType: 'prompt'`**, Registrierung über das gebündelte `virtual:pwa-register/react` (kein Inline-Skript, CSP-konform).
 - **Fonts:** nur das `latin`-Subset von Rajdhani 600/700 und Barlow 400/500 (enthält ä ö ü ß und „“).
 - **Icons** werden mit `sharp` aus `public/favicon.svg` erzeugt und eingecheckt; der Build braucht `sharp` nicht.
+- **Ein Bündel statt Code-Splitting.** Der Service Worker lädt ohnehin alles vorab, getrennte Chunks brächten offline keinen Vorteil. Die Vite-Warngrenze für die Chunk-Größe ist deshalb auf 900 kB gesetzt.
 - **Testdateien** (`*.test.ts`) laufen über `tsconfig.node.json` (Node-Typen), App-Code bleibt frei von Node-Typen.
 - **`PROMPT.md` und `.claude/` sind in `.gitignore`**, weil der Auftragstext persönliche Angaben enthält und das Repo öffentlich ist. Commits laufen mit der GitHub-noreply-Adresse.
 - **`user-scalable=no`** im Viewport plus `touch-action: manipulation`: iOS ignoriert Ersteres teilweise, zusammen verhindern sie Doppeltipp-Zoom.
+
+## Bedienung
+
+- **Satzreihenfolge einseitiger Übungen:** Seiten im Wechsel, rechts beginnt (R1, L1, R2, L2 …). So erholt sich ein Bein, während das andere arbeitet. Jeder Satz lässt sich aber frei antippen.
+- **Supersätze:** Nach „Satz speichern“ wechselt die App automatisch zur Partnerübung; die Pause (Wert der letzten Übung der Gruppe) läuft erst nach der Runde. Zwischen normalen Übungen wird nicht automatisch gewechselt, sondern „Nächste Übung“ angeboten.
+- **Pausentimer:** zählt bis zur unteren Pausengrenze, danach „Bereit“ und weiter bis zur oberen Grenze. Rechnet nur mit Zeitstempeln.
+- **Übersprungene Übungen** bleiben in der geplanten Satzzahl enthalten, senken also den Prozentwert.
+- **Korrektur abgeschlossener Einheiten** ändert Sätze, aber nicht mehr den Status (abgeschlossen/abgebrochen).
+- **Einrichtung auf neuem Gerät:** Das Onboarding bietet „Backup einspielen“ an. Außerdem warnt es, die App erst vom Home-Bildschirm aus einzurichten, weil iOS Safari- und Home-Bildschirm-Daten trennt.
+- **Entwickler-Seed** (`src/dev/seedData.ts`) erzeugt ein Backup-Objekt. Im Dev-Modus per Knopf in SYSTEM, in Playwright über den normalen Import. Im Produktionsbuild ist er nicht enthalten (dynamischer Import hinter `import.meta.env.DEV`).
 
 ## Auslegung des Datenmodells (plan.json)
 

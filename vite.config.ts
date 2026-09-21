@@ -42,6 +42,8 @@ function cspPlugin(): Plugin {
 export default defineConfig({
   // Relativ, weil GitHub Pages unter /<repo>/ ausliefert.
   base: './',
+  // Die App wird vollständig vorab gecacht; ein einzelnes Bündel ist hier gewollt.
+  build: { chunkSizeWarningLimit: 900 },
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),

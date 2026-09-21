@@ -1,54 +1,45 @@
 import { useState } from 'react'
 import { say } from '../content/jarvis'
-import { formatDateDe, mondayOf } from '../domain/dates'
-import type { Plan, PlanSession } from '../domain/plan'
-import { weekSummary } from '../domain/scoring'
-import { dayContext, type DayContext } from '../domain/schedule'
-import type { SessionLog } from '../domain/types'
+import { formatDateDe } from '../domain/dates'
+import type { Plan } from '../domain/plan'
+import type { DayContext } from '../domain/schedule'
+import type { Derived } from '../state/derived'
 import { finishSession } from '../state/mission'
+import { requestStart } from '../state/start'
 import { useApp } from '../state/store'
 import { useUi } from '../state/ui'
 import { Button, Dialog, JarvisLine, Panel } from '../ui/controls'
+import { formatInt, formatPct } from '../ui/format'
 import { useLine } from '../ui/useLine'
 import s from './screen.module.css'
+import m from './mission/mission.module.css'
 
 const WEEK_TYPE_LABEL = { calibration: 'Kalibrierung', normal: 'Normal', deload: 'Deload' } as const
+const KNEE_LABEL = { green: 'grün', yellow: 'gelb', red: 'rot' } as const
 
 export function weekTypeLabel(ctx: DayContext): string {
   return ctx.taper ? 'Taper' : WEEK_TYPE_LABEL[ctx.weekType]
 }
 
-/** Stunden seit der letzten Unterkörper-Einheit, falls unter der Vorgabe des Plans. */
-export function lowerTooSoonHours(plan: Plan, sessions: SessionLog[], now: number): number | null {
-  const last = sessions
-    .filter((x) => x.focus === 'lower' && x.status === 'completed')
-    .reduce<number | null>((t, x) => Math.max(t ?? 0, x.endedAt ?? x.startedAt), null)
-  if (last === null) return null
-  const hours = (now - last) / 3_600_000
-  return hours < plan.schedule.minHoursBetweenLowerSessions ? Math.floor(hours) : null
+export function opLabel(ctx: DayContext): string {
+  return ctx.daysToOp === null ? 'OP offen' : ctx.daysToOp > 0 ? `OP in ${ctx.daysToOp} T` : 'OP erreicht'
 }
 
-export function Home({ plan }: { plan: Plan }) {
+export function Home({ plan, derived }: { plan: Plan; derived: Derived }) {
   const settings = useApp((st) => st.settings)
   const sessions = useApp((st) => st.sessions)
-  const today = useApp((st) => st.today)
+  const kneeChecks = useApp((st) => st.kneeChecks)
   const openMission = useUi((u) => u.openMission)
-  const [tooSoon, setTooSoon] = useState<{ template: PlanSession; hours: number; line: string } | null>(null)
   const [discard, setDiscard] = useState(false)
 
-  const ctx = dayContext(plan, settings, today)
-  const week = weekSummary(plan, sessions, mondayOf(today))
+  const { ctx, week } = derived
   const active = sessions.find((x) => x.status === 'active') ?? null
   const ordered = [...plan.sessions].sort((a, b) => a.order - b.order)
   const recommended = ordered.find((t) => !week.fulfilled.has(t.id)) ?? null
-
   const repairLine = useLine('repairMode')
-
-  const start = (template: PlanSession) => {
-    const hours = template.focus === 'lower' ? lowerTooSoonHours(plan, sessions, Date.now()) : null
-    if (hours !== null) return setTooSoon({ template, hours, line: say('lowerTooSoon', { hours }) })
-    openMission({ kind: 'start', templateId: template.id })
-  }
+  const lastKnee = kneeChecks.reduce<(typeof kneeChecks)[number] | null>((a, b) => (!a || b.at > a.at ? b : a), null)
+  const mark = plan.marks.find((x) => x.level === derived.reachedLevel)
+  const backupDays = settings.lastBackupAt === null ? null : Math.floor((Date.now() - settings.lastBackupAt) / 86_400_000)
 
   const lockText =
     ctx.locked === 'notStarted' && settings.programStart
@@ -64,16 +55,15 @@ export function Home({ plan }: { plan: Plan }) {
   return (
     <main className={s.scroll}>
       <div className={s.rowBetween}>
-        <p className={s.kicker}>
-          Woche <span className="num">{Math.max(ctx.programWeek, 0)}</span> · Block {ctx.block} · {weekTypeLabel(ctx)}
-        </p>
-        <p className={s.kicker}>
-          {ctx.daysToOp === null ? 'OP offen' : ctx.daysToOp > 0 ? `OP in ${ctx.daysToOp} T` : 'OP erreicht'}
-        </p>
+        <p className={s.kicker}>{mark ? mark.name : 'Noch keine Mark-Stufe'}</p>
+        <p className={s.kicker}>{opLabel(ctx)}</p>
       </div>
       <h1 className={`${s.h1} num`}>
         {week.pflichtDone} / {week.pflichtTarget} Pflicht · {week.bonusDone} / {week.bonusTarget} Bonus
       </h1>
+      <p className={s.muted}>
+        Woche <span className="num">{Math.max(ctx.programWeek, 0)}</span> · Block {ctx.block} · {weekTypeLabel(ctx)}
+      </p>
       {ctx.weekType === 'calibration' && !ctx.taper && <JarvisLine text={say('calibrationWeek')} />}
       {ctx.weekType === 'deload' && <JarvisLine text={say('deloadWeek')} />}
       {ctx.taper && <JarvisLine text={say('taper')} />}
@@ -107,67 +97,39 @@ export function Home({ plan }: { plan: Plan }) {
               {recommended.name}
               {recommended.durationMin ? ` · ca. ${recommended.durationMin} min` : ''}
             </p>
-            <Button variant="primary" block onClick={() => start(recommended)}>
+            <Button variant="primary" block onClick={() => requestStart(plan, recommended)}>
               Mission starten
             </Button>
           </div>
         </Panel>
       )}
-
-      <Panel title="Einheiten dieser Woche">
-        <ul className={s.list}>
-          {ordered.map((t) => {
-            const done = week.fulfilled.has(t.id)
-            return (
-              <li key={t.id}>
-                <button
-                  type="button"
-                  className={s.listBtn}
-                  disabled={Boolean(active) || Boolean(ctx.locked)}
-                  onClick={() => start(t)}
-                  aria-label={`${t.name} starten`}
-                >
-                  <span className={s.listMain}>
-                    <span>{t.name}</span>
-                    <span className={s.listSub}>{t.type === 'pflicht' ? 'Pflicht' : 'Bonus'}</span>
-                  </span>
-                  <span className={s.tag} data-state={done ? 'done' : undefined}>
-                    {done ? 'erledigt' : 'offen'}
-                  </span>
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      </Panel>
-
-      {tooSoon && (
-        <Dialog
-          title="Zu früh für die Beine"
-          actions={
-            <>
-              <Button variant="primary" onClick={() => setTooSoon(null)}>
-                Andere Einheit wählen
-              </Button>
-              <Button
-                variant="danger"
-                onClick={() => {
-                  openMission({ kind: 'start', templateId: tooSoon.template.id })
-                  setTooSoon(null)
-                }}
-              >
-                Trotzdem starten
-              </Button>
-            </>
-          }
-        >
-          <p>{tooSoon.line}</p>
-          <p>
-            Zwischen zwei Unterkörper-Einheiten sollen {plan.schedule.minHoursBetweenLowerSessions} Stunden liegen. Seit
-            der letzten sind es {tooSoon.hours}.
-          </p>
-        </Dialog>
+      {!active && !ctx.locked && !recommended && (
+        <Panel title="Woche erledigt">
+          <p className={s.text}>Alle Einheiten dieser Woche sind protokolliert.</p>
+        </Panel>
       )}
+
+      <Panel title="Lage">
+        <div className={m.statRow}>
+          <span className={m.statLabel}>Knie</span>
+          <span>
+            <span className={s.dot} data-knee={lastKnee?.status} />
+            {lastKnee ? `${KNEE_LABEL[lastKnee.status]} · ${formatDateDe(lastKnee.date).slice(0, 6)}` : 'noch kein Check'}
+          </span>
+        </div>
+        <div className={m.statRow}>
+          <span className={m.statLabel}>Symmetrie</span>
+          <span className="num">{derived.symmetry.index === null ? 'noch keine Daten' : formatPct(derived.symmetry.index)}</span>
+        </div>
+        <div className={m.statRow}>
+          <span className={m.statLabel}>Punkte</span>
+          <span className="num">{formatInt(derived.points.total)}</span>
+        </div>
+        <div className={m.statRow}>
+          <span className={m.statLabel}>Backup</span>
+          <span className="num">{backupDays === null ? 'noch keines' : backupDays === 0 ? 'heute' : `vor ${backupDays} T`}</span>
+        </div>
+      </Panel>
 
       {discard && active && (
         <Dialog

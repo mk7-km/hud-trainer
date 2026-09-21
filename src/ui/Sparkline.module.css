@@ -1,0 +1,42 @@
+.chart {
+  display: block;
+  width: 100%;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
+}
+
+.guide {
+  stroke: var(--line);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.line {
+  fill: none;
+  stroke: var(--cyan);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.dot {
+  fill: var(--cyan);
+}
+
+[data-tone='muted'] .line {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+
+[data-tone='muted'] .dot {
+  fill: var(--muted);
+}
+
+[data-tone='ice'] .line {
+  stroke: var(--ice);
+}
+
+[data-tone='ice'] .dot {
+  fill: var(--ice);
+}
