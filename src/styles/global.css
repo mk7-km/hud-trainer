@@ -51,6 +51,18 @@ body {
   touch-action: manipulation;
 }
 
+/* Feines Punktraster, sehr geringe Deckkraft, unbewegt */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--line) 55%, transparent) 1px, transparent 1.5px);
+  background-size: 22px 22px;
+  opacity: 0.22;
+  pointer-events: none;
+}
+
 #root {
   height: 100%;
   display: flex;

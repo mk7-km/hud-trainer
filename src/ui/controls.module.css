@@ -25,6 +25,7 @@
 
 .primary {
   min-height: 56px;
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
   border-color: var(--cyan);
   color: var(--bg-0);
   background: var(--cyan);
@@ -55,23 +56,53 @@
   letter-spacing: 0;
 }
 
+/* Panel: abgeschrägte Ecken (oben links, unten rechts), Eckklammern an den beiden anderen Ecken.
+   Rahmen- und Klammerfarbe tragen den Zustand: ruhig, aktiv, Warnung, Alarm. */
 .panel {
+  --edge: color-mix(in srgb, var(--line) 65%, transparent);
+  --bracket: var(--line);
+  --cut: 12px;
   position: relative;
-  background: color-mix(in srgb, var(--bg-1) 92%, transparent);
-  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  isolation: isolate;
   padding: 14px 16px;
 }
 
+.panel::before,
+.panel::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+}
+
+.panel::before {
+  inset: 0;
+  background: var(--edge);
+}
+
+.panel::after {
+  inset: 1px;
+  background:
+    linear-gradient(var(--bracket), var(--bracket)) top right / 16px 2px no-repeat,
+    linear-gradient(var(--bracket), var(--bracket)) top right / 2px 16px no-repeat,
+    linear-gradient(var(--bracket), var(--bracket)) bottom left / 16px 2px no-repeat,
+    linear-gradient(var(--bracket), var(--bracket)) bottom left / 2px 16px no-repeat,
+    var(--bg-1);
+}
+
 .panel[data-tone='warn'] {
-  border-color: var(--amber);
+  --edge: color-mix(in srgb, var(--amber) 70%, transparent);
+  --bracket: var(--amber);
 }
 
 .panel[data-tone='alarm'] {
-  border-color: var(--red);
+  --edge: var(--red);
+  --bracket: var(--red);
 }
 
 .panel[data-tone='active'] {
-  border-color: var(--cyan);
+  --edge: color-mix(in srgb, var(--cyan) 75%, transparent);
+  --bracket: var(--cyan);
 }
 
 .panelTitle {

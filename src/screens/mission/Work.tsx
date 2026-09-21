@@ -4,6 +4,7 @@ import type { Plan } from '../../domain/plan'
 import { recommend, type Recommendation } from '../../domain/progression'
 import { historyKey, type ResolvedItem, type ResolvedSession } from '../../domain/sessionPlan'
 import type { SessionLog, SetLog, SkipReason } from '../../domain/types'
+import { playCue } from '../../platform/audio'
 import { deleteSet, saveSet, setCheck, skipExercise, type SetInput } from '../../state/mission'
 import { useApp } from '../../state/store'
 import { useUi } from '../../state/ui'
@@ -157,7 +158,10 @@ export function Work({ plan, session, resolved, review = false, onFinish, onLeav
       return it.logType === 'checklist' ? !checklistDone(it) : nextOpenSlot(it, nextSets) !== null
     }
     const result = afterSave(items, cursor, open)
-    if (!review) startRest(result.rest)
+    if (!review) {
+      playCue('setSaved')
+      startRest(result.rest)
+    }
     // Nur innerhalb eines Supersatzes wird automatisch gewechselt.
     if (result.nextIndex !== null && members.includes(result.nextIndex) && result.nextIndex !== cursor) {
       go(result.nextIndex)

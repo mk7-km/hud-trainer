@@ -24,6 +24,14 @@
 - **Einrichtung auf neuem Gerät:** Das Onboarding bietet „Backup einspielen“ an. Außerdem warnt es, die App erst vom Home-Bildschirm aus einzurichten, weil iOS Safari- und Home-Bildschirm-Daten trennt.
 - **Entwickler-Seed** (`src/dev/seedData.ts`) erzeugt ein Backup-Objekt. Im Dev-Modus per Knopf in SYSTEM, in Playwright über den normalen Import. Im Produktionsbuild ist er nicht enthalten (dynamischer Import hinter `import.meta.env.DEV`).
 
+## Gestaltung, Ton, Stimme
+
+- **Panels:** Abschrägung oben links/unten rechts über `clip-path` auf zwei Pseudo-Elementen (Rand + Fläche), damit die Haarlinie auch an der Schräge sichtbar bleibt. Eckklammern an den beiden anderen Ecken. Rand- und Klammerfarbe tragen den Zustand (ruhig, aktiv = Cyan, Warnung = Amber, Alarm = Rot).
+- **Animationen nur über `transform` und `opacity`:** Reaktor-Leerlauf (32–40 s je Umdrehung), Boot (1,4 s, Tipp überspringt), Aufzeichnen des Reaktors, Mark-Aufstieg. `prefers-reduced-motion` und „Animationen reduzieren“ schalten alles ab, inklusive Boot.
+- **Boot-Texte** („Kern online“ …) sind Instrumenten-Beschriftungen, keine J.A.R.V.I.S.-Zeilen.
+- **Töne:** Sinus-Signale über Web Audio (Satz gespeichert, Pause vorbei, Mission abgeschlossen, Mark-Aufstieg). Der AudioContext entsteht bei der ersten Nutzergeste. „Pause vorbei“ ertönt nur, wenn die App im Vordergrund ist; iOS lässt Web-Apps im Hintergrund keine Töne planen.
+- **Stimme:** `speechSynthesis`, `de-DE`, Rate 1,0, Tonhöhe 0,85. Anlässe: Begrüßung (bei der ersten Berührung nach dem Kaltstart), Missionsstart, Missionsende, Ampel Gelb/Rot, Mark-Aufstieg.
+
 ## Spielsystem und Hinweise
 
 - **Eine J.A.R.V.I.S.-Zeile auf HOME, nach Dringlichkeit** (`src/domain/homeLine.ts`): Reparaturmodus/Ruhetag → Backup überfällig → Gewicht fällt zu schnell → Montag/Dienstag die Bilanz der Vorwoche (solange in der neuen Woche nichts erledigt ist) → Inaktivität → Taper/Kalibrierung/Deload → fehlende Wägungen → OP-Countdown (ab 30 Tagen, wenn das Wochenziel steht) → Wochenstand. Die Hinweise darunter sind nüchterner App-Text, keine zweite J.A.R.V.I.S.-Zeile.

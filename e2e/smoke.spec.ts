@@ -25,6 +25,11 @@ test('Onboarding, komplette Mission, Fortsetzen, Backup – ohne fremde Anfragen
   await shot(page, 'm2-onboarding')
   await page.getByRole('button', { name: 'Einrichtung abschließen' }).click()
 
+  // Boot-Sequenz (Kaltstart), geht von selbst in HOME über
+  await expect(page.getByRole('button', { name: 'Boot-Sequenz überspringen' })).toBeVisible()
+  await page.waitForTimeout(800)
+  await shot(page, 'm5-boot')
+
   // HOME
   await expect(page.getByText(/Woche 1 · Block 1 · Kalibrierung/)).toBeVisible()
   await expect(page.getByRole('img', { name: /0 von 4 Pflichteinheiten/ })).toBeVisible()

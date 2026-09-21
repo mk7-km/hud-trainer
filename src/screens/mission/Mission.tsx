@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { say } from '../../content/jarvis'
 import type { KneeAnswers } from '../../domain/knee'
 import type { Plan } from '../../domain/plan'
@@ -7,6 +7,8 @@ import { completionRatio, streaks } from '../../domain/scoring'
 import { rightRecords } from '../../domain/strength'
 import { dayContext } from '../../domain/schedule'
 import type { SessionLog } from '../../domain/types'
+import { playCue } from '../../platform/audio'
+import { speak } from '../../platform/voice'
 import { useWakeLock } from '../../platform/wakeLock'
 import { beginSession, chooseExercise, finishSession, resolveFor, sessionProgress, setCheck } from '../../state/mission'
 import { useApp } from '../../state/store'
@@ -33,6 +35,9 @@ export function Mission({ plan, target }: { plan: Plan; target: MissionTarget })
   const [lockingAck, setLockingAck] = useState(false)
   const [confirmFinish, setConfirmFinish] = useState(false)
   const [line, setLine] = useState<string | null>(null)
+  const [startLine] = useState(() => (target.kind === 'start' ? say('missionStart') : null))
+
+  useEffect(() => speak(startLine), [startLine])
 
   const session = sessions.find((x) => x.id === sessionId) ?? null
   const resolved = useMemo(() => (session ? resolveFor(plan, session) : null), [plan, session])
@@ -47,10 +52,12 @@ export function Mission({ plan, target }: { plan: Plan; target: MissionTarget })
       const { session: created, knee } = await beginSession(plan, template.id, ctx, answers)
       setSessionId(created.id)
       setLocking(knee.locking)
-      setLine(knee.status === 'green' ? say('kneeGreen') : knee.status === 'yellow' ? say('kneeYellow') : say('kneeRed'))
+      const kneeLine = knee.status === 'green' ? say('kneeGreen') : knee.status === 'yellow' ? say('kneeYellow') : say('kneeRed')
+      setLine(kneeLine)
+      if (knee.status !== 'green') speak(kneeLine)
       setPhase('notice')
     }
-    return <KneeCheck plan={plan} sessionName={template.name} onSubmit={(a) => void submit(a)} onCancel={close} />
+    return <KneeCheck plan={plan} sessionName={template.name} line={startLine} onSubmit={(a) => void submit(a)} onCancel={close} />
   }
 
   if (!session) return null
@@ -166,7 +173,10 @@ export function Mission({ plan, target }: { plan: Plan; target: MissionTarget })
       record ? { exercise: plan.exercises[record.exerciseId]?.name ?? record.exerciseId, kg: Math.round(record.e1rm) } : null,
       Math.round(ratio * 100),
     )
-    setLine(say(choice.key, choice.vars))
+    const endLine = say(choice.key, choice.vars)
+    setLine(endLine)
+    if (finished.status === 'completed') playCue('missionDone')
+    speak(endLine)
     setConfirmFinish(false)
     setPhase('summary')
   }

@@ -1,4 +1,7 @@
+import { useEffect } from 'react'
 import type { Plan } from '../domain/plan'
+import { playCue } from '../platform/audio'
+import { speak } from '../platform/voice'
 import type { Derived } from '../state/derived'
 import { useApp } from '../state/store'
 import { useUi } from '../state/ui'
@@ -48,6 +51,13 @@ export function MarkUpOverlay() {
   const markUp = useUi((u) => u.markUp)
   const setMarkUp = useUi((u) => u.setMarkUp)
   const line = useLine(markUp ? 'markUp' : null, { mark: markUp?.name ?? '' })
+
+  useEffect(() => {
+    if (!line) return
+    playCue('markUp')
+    speak(line)
+  }, [line])
+
   if (!markUp) return null
 
   return (

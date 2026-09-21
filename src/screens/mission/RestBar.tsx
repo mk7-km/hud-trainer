@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react'
+import { playCue } from '../../platform/audio'
 import { useUi } from '../../state/ui'
 import { formatClock } from '../../ui/format'
 import { useTick } from '../../ui/useTick'
@@ -8,6 +10,17 @@ export function RestBar() {
   const rest = useUi((u) => u.rest)
   const clearRest = useUi((u) => u.clearRest)
   const now = useTick(rest !== null)
+  const announced = useRef<number | null>(null)
+  const isOver = rest !== null && now >= rest.endsAt
+
+  // Signal genau einmal je Pause, sobald die Mindestpause erreicht ist.
+  useEffect(() => {
+    if (!rest || !isOver || announced.current === rest.startedAt) return
+    announced.current = rest.startedAt
+    // Kam die App erst lange nach Ablauf zurück, bleibt es still.
+    if (Date.now() - rest.endsAt < 3000) playCue('restEnd')
+  }, [rest, isOver])
+
   if (!rest) return <div className={m.restSpacer} />
 
   const remaining = (rest.endsAt - now) / 1000

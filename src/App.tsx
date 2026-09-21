@@ -1,7 +1,10 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { say } from './content/jarvis'
 import type { Plan } from './domain/plan'
+import { setSoundEnabled, unlockAudio } from './platform/audio'
+import { setVoiceEnabled, speak, unlockVoice } from './platform/voice'
+import { Boot } from './screens/Boot'
 import { Home } from './screens/Home'
 import { Mission } from './screens/mission/Mission'
 import { Onboarding } from './screens/Onboarding'
@@ -63,6 +66,9 @@ export function App() {
   return <Main plan={plan} />
 }
 
+// Kaltstart: gilt nur für den ersten Aufbau nach dem Laden der Seite.
+let coldStart = true
+
 function Main({ plan }: { plan: Plan }) {
   const planUpdatedTo = useApp((st) => st.planUpdatedTo)
   const dismissPlanUpdated = useApp((st) => st.dismissPlanUpdated)
@@ -73,15 +79,50 @@ function Main({ plan }: { plan: Plan }) {
   const derived = useDerived(plan)
   useMarkSync(plan, derived)
 
+  const sound = useApp((st) => st.settings.sound)
+  const voice = useApp((st) => st.settings.voice)
+  const bootSequence = useApp((st) => st.settings.bootSequence)
+
+  const [booting, setBooting] = useState(
+    () => coldStart && bootSequence && !reduceMotion && !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  )
+  const [draw, setDraw] = useState(booting)
+  const endBoot = useCallback(() => setBooting(false), [])
+
+  useEffect(() => {
+    if (booting) return
+    const id = window.setTimeout(() => setDraw(false), 2000)
+    return () => window.clearTimeout(id)
+  }, [booting])
+
   useEffect(() => {
     document.documentElement.dataset.reduceMotion = String(reduceMotion)
   }, [reduceMotion])
+
+  useEffect(() => {
+    setSoundEnabled(sound)
+    setVoiceEnabled(voice)
+  }, [sound, voice])
+
+  // Ton und Stimme erst nach der ersten Nutzergeste; dabei einmalig die Begrüßung.
+  useEffect(() => {
+    const greet = coldStart
+    coldStart = false
+    const onGesture = () => {
+      unlockAudio()
+      unlockVoice()
+      if (greet) speak(say('greeting'))
+    }
+    window.addEventListener('pointerdown', onGesture, { once: true })
+    return () => window.removeEventListener('pointerdown', onGesture)
+  }, [])
 
   const {
     needRefresh: [needRefresh],
     updateServiceWorker,
   } = useRegisterSW()
 
+  if (booting) return <Boot planVersion={plan.planVersion} onDone={endBoot} />
   if (mission) return <Mission key={JSON.stringify(mission)} plan={plan} target={mission} />
 
   return (
@@ -100,7 +141,7 @@ function Main({ plan }: { plan: Plan }) {
           </Button>
         </div>
       )}
-      {tab === 'home' && <Home plan={plan} derived={derived} draw={false} />}
+      {tab === 'home' && <Home plan={plan} derived={derived} draw={draw} />}
       {tab === 'week' && <Week plan={plan} derived={derived} />}
       {tab === 'status' && <Status plan={plan} derived={derived} />}
       {tab === 'system' && <System plan={plan} derived={derived} />}

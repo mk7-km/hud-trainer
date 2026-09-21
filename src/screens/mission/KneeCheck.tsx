@@ -1,18 +1,20 @@
 import { useState } from 'react'
 import { isKneeCheckComplete, type KneeAnswers } from '../../domain/knee'
 import type { Plan } from '../../domain/plan'
-import { Button, Seg } from '../../ui/controls'
+import { Button, JarvisLine, Seg } from '../../ui/controls'
 import s from '../screen.module.css'
 import m from './mission.module.css'
 
 export function KneeCheck({
   plan,
   sessionName,
+  line,
   onSubmit,
   onCancel,
 }: {
   plan: Plan
   sessionName: string
+  line: string | null
   onSubmit: (answers: KneeAnswers) => void
   onCancel: () => void
 }) {
@@ -30,6 +32,8 @@ export function KneeCheck({
           Abbrechen
         </Button>
       </div>
+
+      <JarvisLine text={line} />
 
       {plan.kneeCheck.questions.map((q) => (
         <div key={q.id} className={s.stack}>
