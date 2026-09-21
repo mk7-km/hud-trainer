@@ -18,9 +18,13 @@ Der Nutzer ist kein Entwickler. Nie darum bitten, Code zu bearbeiten. Schritte m
 - `public/plan.json` – Trainingsplan, zur Laufzeit network-first geladen (Workbox `NetworkFirst`), mit zod validiert.
 - `src/content/jarvis.de.json` – alle J.A.R.V.I.S.-Texte; J.A.R.V.I.S. spricht nur mit diesen Zeilen.
 - `src/domain/` – UI-freie Fachlogik (Kalender, Wochentyp, Ampel, Satzregeln, Progression, e1RM/Symmetrie, Punkte, Serien, Marks, Körpergewicht). Reine Funktionen, vollständig mit Vitest getestet.
-- `src/db/` – Dexie-Schema, Backup-Export/Import mit Migrationen.
-- `src/platform/` – Browser-APIs (Standalone, Wake Lock, Audio, Stimme, Share).
-- `src/ui/`, `src/screens/` – React-Komponenten, CSS-Module, Tokens in `src/styles/global.css`.
+- `src/db/` – Dexie-Schema (`db.ts`), Backup-Export/Import mit Migrationen (`backup.ts`), Plan-Lader mit letzter gültiger Version in IndexedDB (`planLoader.ts`).
+- `src/state/` – Zustand-Stores: `store.ts` (Plan, Einstellungen, alle Logs im Speicher), `ui.ts` (Tab, laufende Mission, Pausentimer), `derived.ts` (alle abgeleiteten Werte als reine Funktionen über Logs + Plan), `mission.ts`/`body.ts`/`marks.ts`/`start.tsx` (Schreibvorgänge: erst Datenbank, dann Store).
+- `src/platform/` – Browser-APIs: Standalone-Erkennung, Offline-Status, Wake Lock, Web Audio (`audio.ts`), Stimme (`voice.ts`, iOS-Eigenheiten dort kommentiert), Teilen/Speicherschutz (`share.ts`).
+- `src/screens/` – Onboarding, Boot, Home, Week, Status, System, Overlays (OP-Frage, Mark-Aufstieg), `mission/` (Knie-Check, Work, RestBar, Stopwatch, Summary).
+- `src/ui/` – Bedienelemente (`controls.tsx`: Button, Panel, Seg, Stepper, Dialog), Reactor, Sparkline, BackupPanel. Tokens in `src/styles/global.css`.
+- `src/dev/seedData.ts` – Beispieldaten als Backup-Objekt (Dev-Knopf in SYSTEM, Playwright). Nicht im Produktionsbuild.
+- `e2e/` – Playwright bei 390 × 844: `smoke` (Onboarding + komplette Mission), `overview` (Übersichten, Korrektur, Löschen/Wiederherstellen), `hardening` (Offline, Planwechsel). Screenshots landen in `e2e/screenshots/` (nicht eingecheckt).
 - Service Worker über `vite-plugin-pwa` (`registerType: 'prompt'`, Update per Tipp).
 - Vite `base: './'` und relatives Manifest, weil Pages unter `/<repo>/` ausliefert.
 
@@ -39,6 +43,14 @@ Unter Windows ist nach frischer Installation evtl. `C:\Program Files\nodejs` noc
 ## Planänderungen
 
 > Neuer Plan: `public/plan.json` durch die gelieferte Datei ersetzen, Schema-Validierung und Tests laufen lassen, committen, pushen. Das Deployment läuft automatisch. Am iPhone App öffnen, Hinweis „Neuer Trainingsplan geladen“ abwarten.
+
+## Änderungen am Datenformat
+
+Neue Felder in Logs oder Einstellungen: Vorgabe in `DEFAULT_SETTINGS` bzw. beim Lesen ergänzen. Bei inkompatiblen Änderungen `BACKUP_SCHEMA_VERSION` erhöhen und in `MIGRATIONS` (`src/db/backup.ts`) den Schritt von der alten Version ergänzen, plus Dexie-`version(n)` mit Upgrade in `src/db/db.ts`. Alte Backups müssen einspielbar bleiben.
+
+## Auslieferung
+
+Version in `package.json` erhöhen (`npm version x.y.z --no-git-tag-version`), `npm run check` und `npm run e2e`, Screenshots ansehen, committen, pushen. Am iPhone erscheint „Neue Version verfügbar“; die App prüft bei jeder Rückkehr in den Vordergrund und über SYSTEM → „Update prüfen“.
 
 ## Pflege
 

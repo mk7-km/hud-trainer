@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { afterSave, findSet, loggedCount, nextOpenSlot, slotsOf, supersetMembers, type Slot } from '../../domain/missionFlow'
 import type { Plan } from '../../domain/plan'
 import { recommend, type Recommendation } from '../../domain/progression'
@@ -190,7 +190,7 @@ export function Work({ plan, session, resolved, review = false, onFinish, onLeav
               {item.variantLabel && ` · ${item.variantLabel}`}
             </p>
             <h1 className={m.title}>{item.name}</h1>
-            <p className={`${s.muted} num`}>{prescription(item)}</p>
+            {prescription(item) && <p className={`${s.muted} num`}>{prescription(item)}</p>}
           </div>
         </header>
         {item.hint && <p className={m.hint}>{item.hint}</p>}
@@ -367,8 +367,10 @@ function SetEntry({
       : (!weighted || (form.weightKg !== null && (form.weightKg > 0 || item.bodyweightAllowed))) &&
         (timed ? (form.seconds ?? 0) > 0 : (form.reps ?? 0) > 0))
 
+  const saving = useRef(false)
   async function save() {
-    if (!slot || !valid) return
+    if (!slot || !valid || saving.current) return
+    saving.current = true
     const input: SetInput = isDuration
       ? { weightKg: null, reps: null, seconds: (form.minutes ?? 0) * 60, rir: null }
       : {
@@ -377,10 +379,14 @@ function SetEntry({
           seconds: timed ? form.seconds : null,
           rir: item.targetRIR ? form.rir : null,
         }
-    const saved = await saveSet(session, item, slot.side, slot.setIndex, input)
-    const next = [...sessionSets.filter((x) => x.id !== saved.id), saved]
-    setPicked(null)
-    if (!existing) onSaved(next)
+    try {
+      const saved = await saveSet(session, item, slot.side, slot.setIndex, input)
+      const next = [...sessionSets.filter((x) => x.id !== saved.id), saved]
+      setPicked(null)
+      if (!existing) onSaved(next)
+    } finally {
+      saving.current = false
+    }
   }
 
   const sides = isDuration ? [{ side: null, sets: 1 }] : item.sides

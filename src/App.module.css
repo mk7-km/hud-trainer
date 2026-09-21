@@ -18,3 +18,8 @@
 .banner + .banner {
   padding-top: 8px;
 }
+
+/* Unter einem Banner trägt dieses den Abstand zur Notch */
+.banner ~ main {
+  padding-top: 16px;
+}

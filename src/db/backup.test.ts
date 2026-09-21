@@ -78,6 +78,32 @@ describe('Backup', () => {
   })
 })
 
+describe('Migration älterer Backups', () => {
+  const old = { app: 'hud-trainer', schemaVersion: 1, exportedAt: '2026-10-01T08:00:00.000Z', planVersion: '1.0.0', tables: { bodyweight: [{ id: 'a', date: '2026-10-01', at: 1, weight: 91 }] } }
+
+  it('führt alle Schritte bis zur Zielversion der Reihe nach aus', () => {
+    const res = parseBackup(JSON.stringify(old), {
+      version: 3,
+      migrations: {
+        // v1 → v2: Feld umbenannt
+        1: (b) => ({ ...b, tables: { ...b.tables, bodyweight: (b.tables.bodyweight ?? []).map(({ weight, ...r }) => ({ ...r, weightKg: weight })) } }),
+        // v2 → v3: neues Pflichtfeld mit Vorgabe
+        2: (b) => ({ ...b, tables: { ...b.tables, bodyweight: (b.tables.bodyweight ?? []).map((r) => ({ fatPct: null, ...r })) } }),
+      },
+    })
+    expect(res.ok).toBe(true)
+    if (res.ok) {
+      expect(res.backup.schemaVersion).toBe(3)
+      expect(res.backup.tables.bodyweight).toEqual([{ id: 'a', date: '2026-10-01', at: 1, weightKg: 91, fatPct: null }])
+    }
+  })
+
+  it('meldet eine fehlende Migrationsstufe klar', () => {
+    const res = parseBackup(JSON.stringify(old), { version: 3, migrations: { 2: (b) => b } })
+    expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error).toContain('Backup-Version 1')
+  })
+})
 describe('Plan laden', () => {
   it('übernimmt einen gültigen Plan und merkt ihn sich', async () => {
     const d = freshDb()

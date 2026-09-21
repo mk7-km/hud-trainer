@@ -17,8 +17,12 @@ export type Backup = Omit<z.infer<typeof backupSchema>, 'tables'> & {
   tables: Record<UserTable, Record<string, unknown>[]>
 }
 
-/** Migrationen: Schlüssel = Ausgangsversion, Ergebnis = nächste Version. */
-const migrations: Record<number, (b: z.infer<typeof backupSchema>) => z.infer<typeof backupSchema>> = {}
+type RawBackup = z.infer<typeof backupSchema>
+export type Migrations = Record<number, (b: RawBackup) => RawBackup>
+
+/** Migrationen: Schlüssel = Ausgangsversion, Ergebnis = nächste Version. Bei jeder Änderung am Datenformat
+ *  BACKUP_SCHEMA_VERSION erhöhen und hier den Schritt von der alten Version ergänzen. */
+const MIGRATIONS: Migrations = {}
 
 export async function exportBackup(planVersion: string | null, database: TrainerDb = db): Promise<Backup> {
   const tables = {} as Backup['tables']
@@ -59,7 +63,10 @@ const PRIMARY_KEY: Record<UserTable, string> = {
   marksReached: 'level',
 }
 
-export function parseBackup(text: string): ParsedBackup {
+export function parseBackup(
+  text: string,
+  target: { version: number; migrations: Migrations } = { version: BACKUP_SCHEMA_VERSION, migrations: MIGRATIONS },
+): ParsedBackup {
   let json: unknown
   try {
     json = JSON.parse(text)
@@ -70,13 +77,14 @@ export function parseBackup(text: string): ParsedBackup {
   if (!parsed.success) return { ok: false, error: 'Die Datei ist kein Backup dieser App.' }
 
   let data = parsed.data
-  if (data.schemaVersion > BACKUP_SCHEMA_VERSION) {
+  if (data.schemaVersion > target.version) {
     return { ok: false, error: 'Das Backup stammt aus einer neueren App-Version. Aktualisiere zuerst die App.' }
   }
-  while (data.schemaVersion < BACKUP_SCHEMA_VERSION) {
-    const migrate = migrations[data.schemaVersion]
+  while (data.schemaVersion < target.version) {
+    const from = data.schemaVersion
+    const migrate = target.migrations[from]
     if (!migrate) return { ok: false, error: `Backup-Version ${data.schemaVersion} wird nicht unterstützt.` }
-    data = migrate(data)
+    data = { ...migrate(data), schemaVersion: from + 1 }
   }
 
   const tables = {} as Backup['tables']
