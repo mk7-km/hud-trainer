@@ -370,16 +370,19 @@ function ExercisePanel() {
 }
 
 export function Status({ plan, derived }: { plan: Plan; derived: Derived }) {
+  const diary = useApp((st) => st.settings.mode === 'diary')
   return (
     <main className={s.scroll}>
       <p className={s.kicker}>Status</p>
-      <MarkPanel plan={plan} derived={derived} />
-      <Panel title="Punkte und Serie">
-        <Stat label="Punkte gesamt">{formatInt(derived.points.total)}</Stat>
-        <Stat label="Serie (volle Wochen in Folge)">{derived.streak.current}</Stat>
-        <Stat label="Längste Serie">{derived.streak.best}</Stat>
-        <Stat label="Volle Wochen gesamt">{derived.streak.fullWeeksTotal}</Stat>
-      </Panel>
+      {!diary && <MarkPanel plan={plan} derived={derived} />}
+      {!diary && (
+        <Panel title="Punkte und Serie">
+          <Stat label="Punkte gesamt">{formatInt(derived.points.total)}</Stat>
+          <Stat label="Serie (volle Wochen in Folge)">{derived.streak.current}</Stat>
+          <Stat label="Längste Serie">{derived.streak.best}</Stat>
+          <Stat label="Volle Wochen gesamt">{derived.streak.fullWeeksTotal}</Stat>
+        </Panel>
+      )}
       <StrengthPanel plan={plan} derived={derived} />
       <KneePanel plan={plan} />
       <WeightPanel plan={plan} />

@@ -41,6 +41,17 @@
 - **„OP erfolgt?“** wird je OP-Datum einmal gefragt. „Nein“ führt zu SYSTEM, um den Termin zu ändern; bis dahin bleiben Einheiten gesperrt.
 - **Marks nach einem Import** werden aus den Logs neu erreicht, falls das Backup keine enthält; der Aufstieg wird dann einmal angezeigt.
 
+## Tagebuch-Modus (26.10.2026)
+
+Rückmeldung nach den ersten Trainingswochen: keine Motivations-App, ein Trainingstagebuch. Umgesetzt als Einstellung `mode` mit den Werten `diary` (Standard, auch für bestehende Geräte) und `coach` (der ursprüngliche Ablauf), umschaltbar in SYSTEM. So bleibt der HUD-Ablauf für Phase 2 oder einen Meinungswechsel erhalten, ohne zwei Apps zu pflegen.
+
+- **Kein Knie-Check:** eigene Einstellung `kneeCheck` (Standard aus). Ohne Check beginnt die Einheit sofort, wird mit `kneeStatus: 'green'` gespeichert, und es wird **kein** Knie-Check protokolliert (nichts erfinden). Der Plan sieht den Check vor (`askBeforeEverySession`); die Einstellung des Nutzers hat Vorrang. „Wegknicken melden“ in STATUS bleibt.
+- **Alles zählt:** Im Tagebuch gilt jede beendete Einheit mit mindestens einem Eintrag als erledigt (`finishStatus(..., 'diary')`), ohne 80-%-Schwelle, ohne Rückfrage. Nur eine Einheit ohne jeden Eintrag wird als abgebrochen gespeichert. Im Coach bleibt die Schwelle aus dem Plan.
+- **Keine Timer:** Pausentimer, Stoppuhr und das Pausensignal entfallen im Tagebuch; Sekunden bei Halteübungen werden weiterhin eingegeben (von der eigenen Uhr abgelesen). Der Tick „Satz gespeichert“ bleibt, solange Signaltöne eingeschaltet sind.
+- **Einheit als Tab:** Eine laufende Einheit ist ein eigener Tab „EINHEIT“, die übrigen Tabs bleiben erreichbar. Jede Einheit hat eine **Vorschau** (aus WOCHE, HOME und der Wochenliste): Aufwärmen, Übungen mit Vorgabe, Hinweis, letzten Werten je Seite und Empfehlung; von dort wird gestartet. Es läuft weiterhin höchstens eine Einheit gleichzeitig.
+- **Ohne Motivationsschicht:** HOME zeigt im Tagebuch Wochenstand, nächste Einheit, Wochenliste, letzte Einheit und nur Datensicherheits-Hinweise; STATUS ohne Mark- und Punktepanel; keine J.A.R.V.I.S.-Zeilen, keine Begrüßung, kein Mark-Aufstieg. Punkte, Serien und Marks werden weiter berechnet und still gespeichert, damit ein Wechsel zu „Coach“ nahtlos ist. Abstandsregeln (Physio) und OP-/Reparaturlogik gelten in beiden Modi.
+- **Wortwahl:** Im Tagebuch „Einheit“, im Coach weiterhin „Mission“; der Knopf zum Beenden heißt in beiden Modi „Einheit beenden“.
+
 ## Plan 1.1 (26.10.2026)
 
 - **Regel-Archiv je Planversion.** Punkte, Wochenziel und Bonusregeln werden beim Laden eines gültigen Plans als `PlanRules` unter `v:<planVersion>` in `planCache` abgelegt (`src/db/planLoader.ts`); beim ersten Laden einer neuen Version wird der bisherige `lastValid` nachträglich archiviert. Vergangene Wochen zählen nach den Regeln der Planversion ihrer zuletzt begonnenen Einheit, die **laufende Woche immer nach dem aktuellen Plan**. Das Archiv wandert als `planRules` mit ins Backup; fehlt eine Version (neues Gerät ohne Backup), gelten die aktuellen Regeln. Erreichte Marks bleiben ohnehin gespeichert.

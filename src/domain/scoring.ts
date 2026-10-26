@@ -2,7 +2,7 @@ import { addDays, mondayOf } from './dates'
 import { rulesOf, type Plan, type PlanRules, type RulesArchive } from './plan'
 import { isNeutralWeek } from './schedule'
 import { rightRecords } from './strength'
-import type { CheckLog, DateStr, SessionLog, SessionStatus, SetLog, Settings } from './types'
+import type { AppMode, CheckLog, DateStr, SessionLog, SessionStatus, SetLog, Settings } from './types'
 
 /** Erledigte Einheiten einer Sitzung: Sätze + vollständig abgehakte Checklisten. */
 export function doneUnits(
@@ -28,10 +28,10 @@ export function completionRatio(done: number, planned: number): number {
   return planned <= 0 ? 0 : Math.min(1, done / planned)
 }
 
-export function finishStatus(plan: Plan, done: number, planned: number): SessionStatus {
-  return completionRatio(done, planned) >= plan.points.sessionCompleteThreshold
-    ? 'completed'
-    : 'aborted'
+/** Tagebuch: jede Einheit mit mindestens einem Eintrag ist erledigt. Coach: Schwelle aus dem Plan. */
+export function finishStatus(plan: Plan, done: number, planned: number, mode: AppMode = 'coach'): SessionStatus {
+  if (mode === 'diary') return done > 0 ? 'completed' : 'aborted'
+  return completionRatio(done, planned) >= plan.points.sessionCompleteThreshold ? 'completed' : 'aborted'
 }
 
 /** Regeln der Planversion, unter der eine Einheit protokolliert wurde; unbekannte Versionen: aktueller Plan. */

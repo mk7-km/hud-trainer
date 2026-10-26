@@ -7,8 +7,14 @@ export type SkipReason = 'busy' | 'pain' | 'time'
 /** Lokales Datum `YYYY-MM-DD` in der Plan-Zeitzone. */
 export type DateStr = string
 
+/** Tagebuch: aufzeichnen ohne Knie-Check, Timer, Punkte und Sprüche. Coach: der ursprüngliche HUD-Ablauf. */
+export type AppMode = 'diary' | 'coach'
+
 export interface Settings {
   id: 'main'
+  mode: AppMode
+  /** Knie-Check vor jeder Einheit (Plan sieht ihn vor; der Nutzer kann ihn abschalten). */
+  kneeCheck: boolean
   onboardingDone: boolean
   /** Montag der Programmwoche 1. */
   programStart: DateStr | null
@@ -123,6 +129,8 @@ export interface MarkReached {
 
 export const DEFAULT_SETTINGS: Settings = {
   id: 'main',
+  mode: 'diary',
+  kneeCheck: false,
   onboardingDone: false,
   programStart: null,
   opDate: null,

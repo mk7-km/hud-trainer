@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type Tab = 'home' | 'week' | 'status' | 'system'
+export type Tab = 'home' | 'week' | 'status' | 'system' | 'mission'
 
 export type MissionTarget =
   | { kind: 'start'; templateId: string }
@@ -28,9 +28,12 @@ interface UiState {
   tooSoon: TooSoon | null
   /** Gerade erreichte Mark-Stufe (für die Aufstiegsanzeige). */
   markUp: { level: number; name: string; title: string } | null
+  /** Vorschau einer Einheit (Vorlagen-ID), über dem aktuellen Tab. */
+  preview: string | null
+  setPreview(templateId: string | null): void
   setTab(tab: Tab): void
   openMission(target: MissionTarget): void
-  closeMission(): void
+  closeMission(next?: Tab): void
   startRest(range: [number, number] | null): void
   clearRest(): void
   setTooSoon(value: TooSoon | null): void
@@ -43,9 +46,12 @@ export const useUi = create<UiState>((set) => ({
   rest: null,
   tooSoon: null,
   markUp: null,
-  setTab: (tab) => set({ tab }),
-  openMission: (mission) => set({ mission, rest: null, tooSoon: null }),
-  closeMission: () => set({ mission: null, rest: null }),
+  preview: null,
+  setPreview: (preview) => set({ preview }),
+  setTab: (tab) => set({ tab, preview: null }),
+  // Die Einheit ist ein eigener Tab: andere Tabs bleiben währenddessen erreichbar.
+  openMission: (mission) => set({ mission, rest: null, tooSoon: null, preview: null, tab: 'mission' }),
+  closeMission: (next: Tab = 'home') => set({ mission: null, rest: null, tab: next }),
   // Zeitstempel statt Zähler: übersteht Hintergrund und Bildschirmsperre.
   startRest: (range) => {
     if (!range || range[0] <= 0) return set({ rest: null })

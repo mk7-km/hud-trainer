@@ -8,6 +8,7 @@ import { Boot } from './screens/Boot'
 import { Home } from './screens/Home'
 import { Mission } from './screens/mission/Mission'
 import { Onboarding } from './screens/Onboarding'
+import { SessionPreview } from './screens/SessionPreview'
 import { MarkUpOverlay, OpDoneDialog } from './screens/Overlays'
 import { Status } from './screens/Status'
 import { System } from './screens/System'
@@ -75,7 +76,9 @@ function Main({ plan }: { plan: Plan }) {
   const tab = useUi((u) => u.tab)
   const setTab = useUi((u) => u.setTab)
   const mission = useUi((u) => u.mission)
+  const preview = useUi((u) => u.preview)
   const reduceMotion = useApp((st) => st.settings.reduceMotion)
+  const mode = useApp((st) => st.settings.mode)
   const derived = useDerived(plan)
   useMarkSync(plan, derived)
 
@@ -112,7 +115,7 @@ function Main({ plan }: { plan: Plan }) {
     const events = ['touchend', 'click', 'keydown'] as const
     const onGesture = () => {
       unlockAudio()
-      unlockVoice(greet ? say('greeting') : null)
+      unlockVoice(greet && useApp.getState().settings.mode === 'coach' ? say('greeting') : null)
       events.forEach((e) => window.removeEventListener(e, onGesture, true))
     }
     events.forEach((e) => window.addEventListener(e, onGesture, true))
@@ -125,7 +128,10 @@ function Main({ plan }: { plan: Plan }) {
   } = useRegisterSW()
 
   if (booting) return <Boot planVersion={plan.planVersion} onDone={endBoot} />
-  if (mission) return <Mission key={JSON.stringify(mission)} plan={plan} target={mission} />
+
+  // Die laufende Einheit ist ein eigener Tab; andere Tabs (z. B. die Vorschau einer anderen Einheit) bleiben erreichbar.
+  const tabs = mission ? [{ id: 'mission' as const, label: 'EINHEIT' }, ...TABS] : TABS
+  const current: Tab = tab === 'mission' && !mission ? 'home' : tab
 
   return (
     <div className={s.shell}>
@@ -143,20 +149,27 @@ function Main({ plan }: { plan: Plan }) {
           </Button>
         </div>
       )}
-      {tab === 'home' && <Home plan={plan} derived={derived} draw={draw} />}
-      {tab === 'week' && <Week plan={plan} derived={derived} />}
-      {tab === 'status' && <Status plan={plan} derived={derived} />}
-      {tab === 'system' && <System plan={plan} derived={derived} />}
+      {preview && current !== 'mission' ? (
+        <SessionPreview plan={plan} derived={derived} templateId={preview} />
+      ) : (
+        <>
+          {current === 'mission' && mission && <Mission key={JSON.stringify(mission)} plan={plan} target={mission} />}
+          {current === 'home' && <Home plan={plan} derived={derived} draw={draw} />}
+          {current === 'week' && <Week plan={plan} derived={derived} />}
+          {current === 'status' && <Status plan={plan} derived={derived} />}
+          {current === 'system' && <System plan={plan} derived={derived} />}
+        </>
+      )}
       <nav className={s.tabbar} aria-label="Hauptnavigation">
-        {TABS.map((t) => (
-          <button key={t.id} type="button" className={s.tab} aria-current={tab === t.id ? 'page' : undefined} onClick={() => setTab(t.id)}>
+        {tabs.map((t) => (
+          <button key={t.id} type="button" className={s.tab} aria-current={current === t.id ? 'page' : undefined} onClick={() => setTab(t.id)}>
             {t.label}
           </button>
         ))}
       </nav>
       <TooSoonDialog />
       <OpDoneDialog plan={plan} derived={derived} />
-      <MarkUpOverlay />
+      {mode === 'coach' && <MarkUpOverlay />}
     </div>
   )
 }

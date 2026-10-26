@@ -48,7 +48,7 @@ function describeSet(item: ResolvedItem, set: SetLog): string {
   return weighted ? `${formatKg(set.weightKg ?? 0)} kg × ${amount}` : `${amount} Wdh`
 }
 
-function recommendationText(item: ResolvedItem, rec: Recommendation): string | null {
+export function recommendationText(item: ResolvedItem, rec: Recommendation): string | null {
   if (rec.kind === 'find') return 'Last finden: sauber im Zielbereich, nicht ans Limit.'
   if (rec.kind !== 'load' || rec.weightKg === null) return null
   const unit = item.logType === 'weight_time' ? ' s' : ''
@@ -62,11 +62,13 @@ interface Props {
   resolved: ResolvedSession
   /** Korrektur einer abgeschlossenen Einheit: keine Pausen, kein Überspringen. */
   review?: boolean
+  /** Pausentimer und Stoppuhr anzeigen (Coach). Im Tagebuch misst die Uhr am Handgelenk. */
+  timers: boolean
   onFinish: () => void
   onLeave: () => void
 }
 
-export function Work({ plan, session, resolved, review = false, onFinish, onLeave }: Props) {
+export function Work({ plan, session, resolved, review = false, timers, onFinish, onLeave }: Props) {
   const allSets = useApp((st) => st.sets)
   const allChecks = useApp((st) => st.checks)
   const sessions = useApp((st) => st.sessions)
@@ -138,7 +140,7 @@ export function Work({ plan, session, resolved, review = false, onFinish, onLeav
         )}
         {!review && (
           <Button variant={doneAll ? 'primary' : 'secondary'} block onClick={onFinish}>
-            Mission beenden
+            Einheit beenden
           </Button>
         )}
       </main>
@@ -161,7 +163,7 @@ export function Work({ plan, session, resolved, review = false, onFinish, onLeav
     const result = afterSave(items, cursor, open)
     if (!review) {
       playCue('setSaved')
-      startRest(result.rest)
+      if (timers) startRest(result.rest)
     }
     // Nur innerhalb eines Supersatzes wird automatisch gewechselt.
     if (result.nextIndex !== null && members.includes(result.nextIndex) && result.nextIndex !== cursor) {
@@ -213,6 +215,7 @@ export function Work({ plan, session, resolved, review = false, onFinish, onLeav
               sessionsById: new Map(sessions.map((x) => [x.id, x])),
             }}
             incrementOverride={settings.incrementOverrides[item.exerciseId]}
+            timers={timers}
             onSaved={handleSaved}
           />
         )}
@@ -238,7 +241,7 @@ export function Work({ plan, session, resolved, review = false, onFinish, onLeav
           </Button>
         )}
       </main>
-      {!review && <RestBar />}
+      {!review && timers && <RestBar />}
 
       {skipFor && (
         <Dialog
@@ -348,6 +351,7 @@ function SetEntry({
   sessionSets,
   history,
   incrementOverride,
+  timers,
   onSaved,
 }: {
   plan: Plan
@@ -356,6 +360,7 @@ function SetEntry({
   sessionSets: SetLog[]
   history: { sets: SetLog[]; sessionsById: Map<string, SessionLog> }
   incrementOverride: number | undefined
+  timers: boolean
   onSaved: (sessionSets: SetLog[]) => void
 }) {
   const slots = slotsOf(item)
@@ -505,7 +510,7 @@ function SetEntry({
           )}
           {timed && (
             <>
-              <Stopwatch range={item.seconds} onStop={(seconds) => setForm((f) => ({ ...f, seconds }))} />
+              {timers && <Stopwatch range={item.seconds} onStop={(seconds) => setForm((f) => ({ ...f, seconds }))} />}
               <Stepper label="Zeit" unit="s" value={form.seconds} step={5} max={3600} onChange={(seconds) => setForm((f) => ({ ...f, seconds }))} />
             </>
           )}

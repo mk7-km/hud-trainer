@@ -4,7 +4,7 @@ import { weekSummary } from '../domain/scoring'
 import { programWeekOf, weekEntry } from '../domain/schedule'
 import type { SessionLog } from '../domain/types'
 import type { Derived } from '../state/derived'
-import { conflictHint, conflictsFor, requestStart } from '../state/start'
+import { conflictHint, conflictsFor } from '../state/start'
 import { useApp } from '../state/store'
 import { useUi } from '../state/ui'
 import { Panel } from '../ui/controls'
@@ -52,10 +52,11 @@ export function Week({ plan, derived }: { plan: Plan; derived: Derived }) {
   const sessions = useApp((st) => st.sessions)
   const today = useApp((st) => st.today)
   const programStart = useApp((st) => st.settings.programStart)
+  const diary = useApp((st) => st.settings.mode === 'diary')
+  const setPreview = useUi((u) => u.setPreview)
   const { ctx, week } = derived
 
   const monday = mondayOf(today)
-  const active = sessions.some((x) => x.status === 'active')
   const thisWeek = sessions.filter((x) => x.date >= monday && x.date <= addDays(monday, 6))
   const ordered = [...plan.sessions].sort((a, b) => a.order - b.order)
 
@@ -89,9 +90,8 @@ export function Week({ plan, derived }: { plan: Plan; derived: Derived }) {
                 <button
                   type="button"
                   className={s.listBtn}
-                  disabled={active || Boolean(ctx.locked)}
-                  onClick={() => requestStart(plan, t)}
-                  aria-label={`${t.name} starten`}
+                  onClick={() => setPreview(t.id)}
+                  aria-label={`${t.name}: Vorschau`}
                 >
                   <span className={s.listMain}>
                     <span>{t.name}</span>
@@ -134,7 +134,7 @@ export function Week({ plan, derived }: { plan: Plan; derived: Derived }) {
                     </span>
                     <span className={s.listSub}>
                       {short(m)} bis {short(addDays(m, 6))}
-                      {bonusPts > 0 ? ` · Wochenbonus ${formatInt(bonusPts)}` : ''}
+                      {bonusPts > 0 && !diary ? ` · Wochenbonus ${formatInt(bonusPts)}` : ''}
                     </span>
                   </span>
                   <span className={`${s.tag} num`} data-state={sum.full ? 'done' : 'warn'}>

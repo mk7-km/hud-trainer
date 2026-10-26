@@ -10,16 +10,17 @@ import { useApp } from './store'
 
 const tz = (plan: Plan) => plan.schedule.timezone
 
-/** Knie-Check speichern und Einheit anlegen (aktiv oder bei Rot + Unterkörper ausgesetzt). */
+/** Einheit anlegen (aktiv oder bei Rot + Unterkörper ausgesetzt). Ohne Knie-Check (`answers: null`) gilt Grün,
+ *  und es wird kein Knie-Check protokolliert. */
 export async function beginSession(
   plan: Plan,
   templateId: string,
   ctx: DayContext,
-  answers: KneeAnswers,
+  answers: KneeAnswers | null,
 ): Promise<{ session: SessionLog; knee: KneeResult }> {
   const now = Date.now()
   const date = localDate(now, tz(plan))
-  const knee = deriveKnee(plan, answers)
+  const knee: KneeResult = answers ? deriveKnee(plan, answers) : { status: 'green', givingWay: false, locking: false }
   const resolved = resolveSession(plan, templateId, ctx, knee.status)
   const t = resolved.template
 
@@ -46,16 +47,16 @@ export async function beginSession(
   const events: KneeEvent[] = []
   if (knee.givingWay) events.push({ id: newId(), date, at: now, type: 'givingWay', source: 'check' })
   if (knee.locking) events.push({ id: newId(), date, at: now, type: 'locking', source: 'check' })
-  const check = { id: newId(), sessionId: session.id, date, at: now, answers, status: knee.status }
+  const check = answers ? { id: newId(), sessionId: session.id, date, at: now, answers, status: knee.status } : null
 
   await db.transaction('rw', db.sessions, db.kneeChecks, db.kneeEvents, async () => {
     await db.sessions.add(session)
-    await db.kneeChecks.add(check)
+    if (check) await db.kneeChecks.add(check)
     if (events.length) await db.kneeEvents.bulkAdd(events)
   })
   useApp.setState((s) => ({
     sessions: [...s.sessions, session],
-    kneeChecks: [...s.kneeChecks, check],
+    kneeChecks: check ? [...s.kneeChecks, check] : s.kneeChecks,
     kneeEvents: [...s.kneeEvents, ...events],
   }))
   return { session, knee }
@@ -170,10 +171,10 @@ export function sessionProgress(session: SessionLog, resolved: ResolvedSession |
   return { done, planned: session.plannedUnits }
 }
 
-/** Einheit beenden: ab der Schwelle abgeschlossen, darunter abgebrochen. */
+/** Einheit beenden. Coach: ab der Schwelle abgeschlossen, darunter abgebrochen. Tagebuch: alles Protokollierte zählt. */
 export async function finishSession(plan: Plan, session: SessionLog): Promise<SessionLog> {
   const { done, planned } = sessionProgress(session, resolveFor(plan, session))
-  const patch = { status: finishStatus(plan, done, planned), endedAt: Date.now() }
+  const patch = { status: finishStatus(plan, done, planned, useApp.getState().settings.mode), endedAt: Date.now() }
   await patchSession(session.id, patch)
   return { ...session, ...patch }
 }

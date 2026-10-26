@@ -13,7 +13,7 @@ export function useMarkSync(plan: Plan | null, derived: Derived | null) {
 
   useEffect(() => {
     if (!plan || earned <= reached) return
-    const today = useApp.getState().today
+    const { today, settings } = useApp.getState()
     const rows: MarkReached[] = plan.marks
       .filter((m) => m.level > reached && m.level <= earned)
       .map((m) => ({ level: m.level, name: m.name, date: today }))
@@ -21,7 +21,8 @@ export function useMarkSync(plan: Plan | null, derived: Derived | null) {
     void db.marksReached.bulkPut(rows).then(() => {
       useApp.setState((s) => ({ marksReached: [...s.marksReached.filter((m) => m.level > earned || m.level <= reached), ...rows] }))
       const top = plan.marks.find((m) => m.level === earned)
-      if (top) useUi.getState().setMarkUp({ level: top.level, name: top.name, title: top.title })
+      // Im Tagebuch wird die Stufe still gespeichert, ohne Aufstiegsanzeige.
+      if (top && settings.mode === 'coach') useUi.getState().setMarkUp({ level: top.level, name: top.name, title: top.title })
     })
   }, [plan, earned, reached])
 }

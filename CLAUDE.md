@@ -13,6 +13,10 @@ Der Nutzer ist kein Entwickler. Nie darum bitten, Code zu bearbeiten. Schritte m
 5. **Trainingsinhalte sind Daten, nicht Code.** Planwechsel nur über `public/plan.json`. Keine Übungs-IDs, Satzzahlen oder Schwellenwerte im Code. `plan.json` und `src/content/jarvis.de.json` inhaltlich nicht verändern.
 6. **Abgeleitete Werte werden berechnet, nicht gespeichert** (Punkte, Reaktor, Symmetrie, Mark-Fortschritt = reine Funktionen über Logs + Plan). Einzige Ausnahme: höchste erreichte Mark-Stufe mit Datum.
 
+## Modi
+
+`settings.mode`: **Tagebuch** (`diary`, Standard) zeichnet auf, ohne Knie-Check (`settings.kneeCheck`), Timer, Punkte, Marks und J.A.R.V.I.S.-Zeilen; jede Einheit mit Eintrag zählt. **Coach** (`coach`) ist der HUD-Ablauf aus PROMPT.md mit Reaktor, Punkten, Pausentimer und 80-%-Schwelle. Beide Modi teilen Datenmodell, Fachlogik und Abstandsregeln; Unterschiede liegen in `Mission.tsx`, `Work.tsx` (`timers`), `Home.tsx` (`DiaryHome`/`CoachHome`), `Status.tsx`, `Summary.tsx`, `marks.ts`. Playwright: `smoke` testet Coach, `overview`/`hardening` das Tagebuch.
+
 ## Architektur
 
 - `public/plan.json` – Trainingsplan, zur Laufzeit network-first geladen (Workbox `NetworkFirst`), mit zod validiert.
@@ -21,7 +25,7 @@ Der Nutzer ist kein Entwickler. Nie darum bitten, Code zu bearbeiten. Schritte m
 - `src/db/` – Dexie-Schema (`db.ts`), Backup-Export/Import mit Migrationen (`backup.ts`, enthält auch das Regel-Archiv `planRules`), Plan-Lader mit letzter gültiger Version und Regel-Archiv je Planversion in IndexedDB (`planLoader.ts`).
 - `src/state/` – Zustand-Stores: `store.ts` (Plan, Einstellungen, alle Logs im Speicher), `ui.ts` (Tab, laufende Mission, Pausentimer), `derived.ts` (alle abgeleiteten Werte als reine Funktionen über Logs + Plan), `mission.ts`/`body.ts`/`marks.ts`/`start.tsx` (Schreibvorgänge: erst Datenbank, dann Store).
 - `src/platform/` – Browser-APIs: Standalone-Erkennung, Offline-Status, Wake Lock, Web Audio (`audio.ts`), Stimme (`voice.ts`, iOS-Eigenheiten dort kommentiert), Teilen/Speicherschutz (`share.ts`).
-- `src/screens/` – Onboarding, Boot, Home, Week, Status, System, Overlays (OP-Frage, Mark-Aufstieg), `mission/` (Knie-Check, Work, RestBar, Stopwatch, Summary).
+- `src/screens/` – Onboarding, Boot, Home, Week, Status, System, SessionPreview (lesbare Vorschau einer Einheit mit letzten Werten), Overlays (OP-Frage, Mark-Aufstieg), `mission/` (Knie-Check, Work, RestBar, Stopwatch, Summary). Eine laufende Einheit ist der Tab `mission` in `ui.ts`; `ui.preview` legt die Vorschau über den aktuellen Tab.
 - `src/ui/` – Bedienelemente (`controls.tsx`: Button, Panel, Seg, Stepper, Dialog), Reactor, Sparkline, BackupPanel. Tokens in `src/styles/global.css`.
 - `src/dev/seedData.ts` – Beispieldaten als Backup-Objekt (Dev-Knopf in SYSTEM, Playwright). Nicht im Produktionsbuild.
 - `e2e/` – Playwright bei 390 × 844: `smoke` (Onboarding + komplette Mission), `overview` (Übersichten, Korrektur, Löschen/Wiederherstellen), `hardening` (Offline, Planwechsel). Screenshots landen in `e2e/screenshots/` (nicht eingecheckt).

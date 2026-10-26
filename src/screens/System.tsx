@@ -151,6 +151,26 @@ export function System({ plan, derived }: { plan: Plan; derived: Derived }) {
         </div>
       </Panel>
 
+      <Panel title="Modus">
+        <div className={s.stack}>
+          <Seg
+            label="Modus"
+            value={settings.mode}
+            onChange={(mode) => void updateSettings({ mode })}
+            options={[
+              { value: 'diary', label: 'Tagebuch' },
+              { value: 'coach', label: 'Coach' },
+            ]}
+          />
+          <p className={s.muted}>
+            {settings.mode === 'diary'
+              ? 'Tagebuch: Jede Einheit wird so aufgezeichnet, wie sie war. Keine Timer, keine Punkte, keine Sprüche.'
+              : 'Coach: Reaktor, Punkte, Mark-Stufen, Pausentimer und J.A.R.V.I.S.-Zeilen; eine Einheit zählt ab 80 % der Sätze.'}
+          </p>
+          <Toggle label="Knie-Check vor jeder Einheit" value={settings.kneeCheck} onChange={(kneeCheck) => void updateSettings({ kneeCheck })} />
+        </div>
+      </Panel>
+
       <Panel title="Darstellung und Ton">
         <Toggle label="Stimme" value={settings.voice} onChange={(voice) => void updateSettings({ voice })} />
         {settings.voice && (

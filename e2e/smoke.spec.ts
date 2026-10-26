@@ -2,7 +2,8 @@ import { expect, test, type Page } from '@playwright/test'
 
 const shot = (page: Page, name: string) => page.screenshot({ path: `e2e/screenshots/${name}.png` })
 
-test('Onboarding, komplette Mission, Fortsetzen, Backup – ohne fremde Anfragen', async ({ page, baseURL }) => {
+// Coach-Modus mit Knie-Check: der ursprüngliche HUD-Ablauf, in SYSTEM umschaltbar.
+test('Coach: Onboarding, komplette Mission, Fortsetzen, Backup – ohne fremde Anfragen', async ({ page, baseURL }) => {
   test.setTimeout(120_000)
   const foreign: string[] = []
   page.on('request', (req) => {
@@ -30,7 +31,14 @@ test('Onboarding, komplette Mission, Fortsetzen, Backup – ohne fremde Anfragen
   await page.waitForTimeout(800)
   await shot(page, 'm5-boot')
 
-  // HOME
+  // Standard ist das Tagebuch; für diesen Test auf Coach mit Knie-Check umschalten
+  await expect(page.getByRole('heading', { name: '0 / 4 Einheiten diese Woche' })).toBeVisible()
+  await page.getByRole('button', { name: 'SYSTEM' }).click()
+  await page.getByRole('radio', { name: 'Coach' }).click()
+  await page.getByRole('radiogroup', { name: 'Knie-Check vor jeder Einheit' }).getByRole('radio', { name: 'Ein' }).click()
+  await page.getByRole('button', { name: 'HOME' }).click()
+
+  // HOME (Coach)
   await expect(page.getByText(/Woche 1 · Block 1 · Kalibrierung/)).toBeVisible()
   await expect(page.getByRole('img', { name: /0 von 4 Pflichteinheiten/ })).toBeVisible()
   await shot(page, 'm2-home')
@@ -84,7 +92,7 @@ test('Onboarding, komplette Mission, Fortsetzen, Backup – ohne fremde Anfragen
   }
   await finishBtn.click()
   await shot(page, 'm2-overview')
-  await page.getByRole('button', { name: 'Mission beenden' }).click()
+  await page.getByRole('button', { name: 'Einheit beenden' }).click()
 
   // Abschluss
   await expect(page.getByText('Mission abgeschlossen', { exact: true })).toBeVisible()
@@ -95,10 +103,11 @@ test('Onboarding, komplette Mission, Fortsetzen, Backup – ohne fremde Anfragen
 
   // Zweite Beineinheit am selben Tag: Abstandsregel (48 Stunden) verlangt Bestätigung
   await page.getByRole('button', { name: 'WOCHE' }).click()
-  await expect(page.getByRole('button', { name: /Unterkörper B.*starten/ })).toContainText('frühestens')
-  await page.getByRole('button', { name: /Unterkörper B.*starten/ }).click()
+  await expect(page.getByRole('button', { name: 'Unterkörper B: Vorschau' })).toContainText('frühestens')
+  await page.getByRole('button', { name: 'Unterkörper B: Vorschau' }).click()
+  await page.getByRole('button', { name: 'Einheit starten' }).click()
   await expect(page.getByRole('alertdialog', { name: 'Abstandsregel' })).toBeVisible()
-  await expect(page.getByText(/mindestens 48 Stunden/)).toBeVisible()
+  await expect(page.getByRole('alertdialog', { name: 'Abstandsregel' }).getByText(/mindestens 48 Stunden/)).toBeVisible()
   await shot(page, 'm2-too-soon')
   await page.getByRole('button', { name: 'Andere Einheit wählen' }).click()
 

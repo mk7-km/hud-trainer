@@ -21,7 +21,7 @@ import { Work } from './Work'
 import s from '../screen.module.css'
 import m from './mission.module.css'
 
-type Phase = 'knee' | 'notice' | 'choose' | 'warmup' | 'work' | 'summary'
+type Phase = 'knee' | 'starting' | 'notice' | 'choose' | 'warmup' | 'work' | 'summary'
 
 export function Mission({ plan, target }: { plan: Plan; target: MissionTarget }) {
   const close = useUi((u) => u.closeMission)
@@ -29,15 +29,38 @@ export function Mission({ plan, target }: { plan: Plan; target: MissionTarget })
   const settings = useApp((st) => st.settings)
   const today = useApp((st) => st.today)
 
-  const [sessionId, setSessionId] = useState<string | null>(target.kind === 'resume' ? target.sessionId : null)
-  const [phase, setPhase] = useState<Phase>(target.kind === 'resume' ? 'work' : 'knee')
+  const diary = settings.mode === 'diary'
+  // Wird die Einheit nach einem Tabwechsel neu aufgebaut, läuft die bereits angelegte Sitzung weiter statt einer zweiten.
+  const [existing] = useState(() =>
+    sessions.find((x) => x.status === 'active' && (target.kind === 'resume' ? x.id === target.sessionId : x.sessionTemplateId === target.templateId)),
+  )
+  const [sessionId, setSessionId] = useState<string | null>(target.kind === 'resume' ? target.sessionId : (existing?.id ?? null))
+  const [phase, setPhase] = useState<Phase>(target.kind === 'resume' || existing ? 'work' : settings.kneeCheck ? 'knee' : 'starting')
   const [locking, setLocking] = useState(false)
   const [lockingAck, setLockingAck] = useState(false)
   const [confirmFinish, setConfirmFinish] = useState(false)
   const [line, setLine] = useState<string | null>(null)
-  const [startLine] = useState(() => (target.kind === 'start' ? say('missionStart') : null))
+  const [startLine] = useState(() => (target.kind === 'start' && !diary ? say('missionStart') : null))
 
   useEffect(() => speak(startLine), [startLine])
+
+  // Ohne Knie-Check: Einheit sofort anlegen und mit Aufwärmen bzw. Übungen beginnen.
+  useEffect(() => {
+    if (phase !== 'starting' || target.kind !== 'start') return
+    let cancelled = false
+    const ctx = dayContext(plan, settings, today)
+    void beginSession(plan, target.templateId, ctx, null).then(({ session: created }) => {
+      if (cancelled) return
+      setSessionId(created.id)
+      const r = resolveFor(plan, created)
+      if (!r) return close()
+      setPhase(r.items.some((i) => i.options) ? 'choose' : r.template.warmup.length ? 'warmup' : 'work')
+    })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase])
 
   const session = sessions.find((x) => x.id === sessionId) ?? null
   const resolved = useMemo(() => (session ? resolveFor(plan, session) : null), [plan, session])
@@ -57,10 +80,10 @@ export function Mission({ plan, target }: { plan: Plan; target: MissionTarget })
       if (knee.status !== 'green') speak(kneeLine)
       setPhase('notice')
     }
-    return <KneeCheck plan={plan} sessionName={template.name} line={startLine} onSubmit={(a) => void submit(a)} onCancel={close} />
+    return <KneeCheck plan={plan} sessionName={template.name} line={startLine} onSubmit={(a) => void submit(a)} onCancel={() => close()} />
   }
 
-  if (!session) return null
+  if (!session) return phase === 'starting' ? <div className={s.scrollFull} /> : null
 
   const afterNotice = (sn: SessionLog) => {
     const r = resolveFor(plan, sn)
@@ -115,7 +138,7 @@ export function Mission({ plan, target }: { plan: Plan; target: MissionTarget })
       <main className={s.scrollFull}>
         <h1 className={s.h1}>{session.sessionName}</h1>
         <p className={s.text}>Diese Einheit gibt es im aktuellen Trainingsplan nicht mehr. Die Protokolle bleiben im Verlauf erhalten.</p>
-        <Button block onClick={close}>
+        <Button block onClick={() => close()}>
           Schließen
         </Button>
       </main>
@@ -151,7 +174,7 @@ export function Mission({ plan, target }: { plan: Plan; target: MissionTarget })
     return <Warmup session={session} items={resolved.template.warmup} onDone={() => setPhase('work')} />
   }
 
-  if (phase === 'summary') return <Summary plan={plan} session={session} line={line} onClose={close} />
+  if (phase === 'summary') return <Summary plan={plan} session={session} line={line} mode={settings.mode} onClose={() => close()} />
 
   // Fortschritt immer frisch aus dem Store lesen: Mission rendert nicht bei jedem gespeicherten Satz neu.
   const currentRatio = () => {
@@ -177,7 +200,7 @@ export function Mission({ plan, target }: { plan: Plan; target: MissionTarget })
     const endLine = say(choice.key, choice.vars)
     setLine(endLine)
     if (finished.status === 'completed') playCue('missionDone')
-    speak(endLine)
+    if (!diary) speak(endLine)
     setConfirmFinish(false)
     setPhase('summary')
   }
@@ -189,8 +212,9 @@ export function Mission({ plan, target }: { plan: Plan; target: MissionTarget })
         session={session}
         resolved={resolved}
         review={review}
-        onLeave={close}
-        onFinish={() => (currentRatio() < plan.points.sessionCompleteThreshold ? setConfirmFinish(true) : void finish())}
+        timers={!diary}
+        onLeave={() => close(review ? 'week' : 'home')}
+        onFinish={() => (!diary && currentRatio() < plan.points.sessionCompleteThreshold ? setConfirmFinish(true) : void finish())}
       />
       {confirmFinish && (
         <Dialog

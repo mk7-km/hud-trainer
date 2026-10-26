@@ -20,7 +20,8 @@ function seedFile(): string {
 async function importSeed(page: Page) {
   await page.getByLabel('Backup-Datei wählen').setInputFiles(seedFile())
   await page.getByRole('button', { name: 'Daten ersetzen' }).click()
-  await page.getByRole('button', { name: 'Weiter' }).click() // Mark-Aufstieg
+  // Import abwarten, bevor der Test weitergeht (sonst Reload mitten in der Transaktion)
+  await expect(page.getByRole('heading', { name: /Einheiten diese Woche/ })).toBeVisible()
 }
 
 test.describe('Offline', () => {
@@ -34,21 +35,14 @@ test.describe('Offline', () => {
 
     await context.setOffline(true)
     await page.reload()
-    await expect(page.getByRole('img', { name: /2 von 4 Pflichteinheiten/ })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '2 / 4 Einheiten diese Woche' })).toBeVisible()
     await page.getByRole('button', { name: 'SYSTEM' }).click()
     await expect(page.getByText(/^1\.1\.0 · /)).toBeVisible()
     await expect(page.getByText('Änderungen noch nicht von der Physio gesehen')).toBeVisible()
 
-    // Empfohlene Einheit (Unterkörper B) starten und einen Satz speichern
+    // Empfohlene Einheit (Unterkörper B) starten und einen Satz speichern – ohne Knie-Check
     await page.getByRole('button', { name: 'HOME' }).click()
-    await page.getByRole('button', { name: 'Mission starten' }).click()
-    await page.getByRole('radio', { name: 'keine' }).click()
-    await page.getByRole('radio', { name: 'Schmerz 0' }).click()
-    for (const group of ['Auffällige Morgensteifigkeit der Sehne?', 'Wegknicken in den letzten 48 Stunden?', 'Blockade oder Einklemmen?']) {
-      await page.getByRole('radiogroup', { name: group }).getByRole('radio', { name: 'nein' }).click()
-    }
-    await page.getByRole('button', { name: 'Knie-Check abschließen' }).click()
-    await page.getByRole('button', { name: 'Weiter' }).click()
+    await page.getByRole('button', { name: 'Einheit starten' }).click()
     await page.getByRole('button', { name: 'Aufwärmen erledigt' }).click()
     await expect(page.getByRole('heading', { name: 'Jump beidbeinig mit Band' })).toBeVisible()
     await page.getByRole('button', { name: 'Satz speichern' }).click()
@@ -56,7 +50,7 @@ test.describe('Offline', () => {
 
     // Neustart ohne Netz: Eintrag ist noch da
     await page.reload()
-    await page.getByRole('button', { name: 'Mission fortsetzen' }).click()
+    await page.getByRole('button', { name: 'Einheit fortsetzen' }).click()
     await page.getByRole('button', { name: 'Zur Übersicht' }).click()
     await expect(page.getByRole('button', { name: /Jump beidbeinig mit Band.*1\/3/ })).toBeVisible()
   })
@@ -87,7 +81,7 @@ test.describe('Planwechsel', () => {
     await expect(page.getByText('Neuer Trainingsplan geladen: Version 1.2.0.')).toBeVisible()
     await page.screenshot({ path: 'e2e/screenshots/m6-plan-updated.png' })
     await page.getByRole('button', { name: 'Schließen' }).click()
-    await expect(page.getByRole('img', { name: /^Wochenenergie: 2 von 3 Pflichteinheiten$/ })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '2 / 3 Einheiten diese Woche' })).toBeVisible()
 
     // Alte Logs: Schnappschuss des alten Namens im Übungsverlauf, alte Einheit im Wochenverlauf
     await page.getByRole('button', { name: 'STATUS' }).click()

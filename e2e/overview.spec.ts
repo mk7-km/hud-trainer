@@ -20,9 +20,13 @@ function seedFile(): string {
 async function importSeed(page: Page, file: string) {
   await page.getByLabel('Backup-Datei wählen').setInputFiles(file)
   await page.getByRole('button', { name: 'Daten ersetzen' }).click()
+  // Import abwarten, bevor der Test weitergeht (sonst Reload mitten in der Transaktion)
+  await page.getByRole('button', { name: 'HOME' }).click()
+  await expect(page.getByRole('heading', { name: /Einheiten diese Woche/ })).toBeVisible()
 }
 
-test('Übersichten mit Beispieldaten, Korrektur, Löschen und Wiederherstellen', async ({ page }) => {
+// Tagebuch-Modus (Standard): kein Knie-Check, keine Timer, keine Punkte, Einheit als eigener Tab.
+test('Tagebuch: Übersichten, Vorschau, freie Übungswahl, Korrektur, Löschen und Wiederherstellen', async ({ page }) => {
   test.setTimeout(120_000)
   const errors: string[] = []
   page.on('console', (msg) => msg.type() === 'error' && errors.push(msg.text()))
@@ -33,29 +37,34 @@ test('Übersichten mit Beispieldaten, Korrektur, Löschen und Wiederherstellen',
   await page.goto('./')
   await importSeed(page, file)
 
-  // Mark-Aufstieg nach dem Import (Marks werden aus den Logs neu erreicht)
-  await expect(page.getByRole('alertdialog', { name: /Mark IV erreicht/ })).toBeVisible()
-  await page.waitForTimeout(1600)
-  await shot(page, 'm4-markup')
-  await page.getByRole('button', { name: 'Weiter' }).click()
-
-  // HOME: Reaktor ohne Bonussegmente, Empfehlung nach recommendedOrder (Unterkörper B, 48 h nach Montag erfüllt)
-  await expect(page.getByText('Nächste Mission')).toBeVisible()
-  await expect(page.getByRole('img', { name: /^Wochenenergie: 2 von 4 Pflichteinheiten$/ })).toBeVisible()
+  // HOME: nüchtern, Empfehlung nach recommendedOrder (Unterkörper B, 48 h nach Montag erfüllt)
+  await expect(page.getByRole('heading', { name: '2 / 4 Einheiten diese Woche' })).toBeVisible()
+  await expect(page.getByText('Nächste Einheit')).toBeVisible()
   await expect(page.getByText('OP in 64 T')).toBeVisible()
   await expect(page.getByText('Unterkörper B · ca. 55 min')).toBeVisible()
-  await shot(page, 'm3-home')
+  await expect(page.getByText('Mark IV')).toHaveCount(0)
+  await shot(page, 'v12-home')
 
-  // Freie Übungswahl: Rumpf starten, zur Bauchübung springen, Namen wählen, Satz speichern
+  // Vorschau einer Einheit: Übungen mit letzten Werten, von dort starten
+  await page.getByRole('button', { name: 'Rumpf: Vorschau' }).click()
+  await expect(page.getByRole('heading', { name: 'Rumpf' })).toBeVisible()
+  await expect(page.getByText(/Zuletzt 06\.11\./).first()).toBeVisible()
+  await shot(page, 'v12-preview')
+  await page.getByRole('button', { name: 'Einheit starten' }).click()
+
+  // Kein Knie-Check, kein Aufwärmen bei Rumpf: direkt die erste Übung, Tab-Leiste bleibt sichtbar
+  await expect(page.getByRole('heading', { name: 'Rudern breit, Langhantel' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'EINHEIT' })).toBeVisible()
+  await expect(page.getByRole('timer')).toHaveCount(0)
+
+  // Während der Einheit eine andere Einheit nachlesen und zurückkehren
   await page.getByRole('button', { name: 'WOCHE' }).click()
-  await page.getByRole('button', { name: 'Rumpf starten' }).click()
-  await page.getByRole('radio', { name: 'keine' }).click()
-  await page.getByRole('radio', { name: 'Schmerz 0' }).click()
-  for (const group of ['Auffällige Morgensteifigkeit der Sehne?', 'Wegknicken in den letzten 48 Stunden?', 'Blockade oder Einklemmen?']) {
-    await page.getByRole('radiogroup', { name: group }).getByRole('radio', { name: 'nein' }).click()
-  }
-  await page.getByRole('button', { name: 'Knie-Check abschließen' }).click()
-  await page.getByRole('button', { name: 'Weiter' }).click()
+  await page.getByRole('button', { name: 'Unterkörper B: Vorschau' }).click()
+  await expect(page.getByText('Zuerst die laufende Einheit „Rumpf“ beenden.')).toBeVisible()
+  await page.getByRole('button', { name: 'EINHEIT' }).click()
+  await expect(page.getByRole('heading', { name: 'Rudern breit, Langhantel' })).toBeVisible()
+
+  // Freie Übungswahl: zur Bauchübung springen, Namen wählen, Satz speichern
   await page.getByRole('button', { name: 'Zur Übersicht' }).click()
   await page.getByRole('button', { name: /Bauch \(freie Wahl\)/ }).click()
   await expect(page.getByText('Welche Bauchübung, Sir?')).toBeVisible()
@@ -67,40 +76,44 @@ test('Übersichten mit Beispieldaten, Korrektur, Löschen und Wiederherstellen',
   await page.getByRole('textbox', { name: 'Gewicht' }).fill('10')
   await page.getByRole('button', { name: 'Satz speichern' }).click()
   await expect(page.getByText('10,0 kg × 10')).toBeVisible()
-  await page.getByRole('button', { name: 'Zur Übersicht' }).click()
-  await page.getByRole('button', { name: 'Später fortsetzen' }).click()
-  await page.getByRole('button', { name: 'HOME' }).click()
-  await expect(page.getByText('Laufende Mission')).toBeVisible()
+  await expect(page.getByRole('timer')).toHaveCount(0)
 
-  // WOCHE: Rumpf läuft, Unterkörper B offen
+  // Einheit mit nur einem Satz beenden: zählt als erledigt (Tagebuch)
+  await page.getByRole('button', { name: 'Zur Übersicht' }).click()
+  await page.getByRole('button', { name: 'Einheit beenden' }).click()
+  await expect(page.getByText('Einheit gespeichert')).toBeVisible()
+  await expect(page.getByText('Punkte')).toHaveCount(0)
+  await shot(page, 'v12-summary')
+  await page.getByRole('button', { name: 'Fertig' }).click()
+  await expect(page.getByRole('heading', { name: '3 / 4 Einheiten diese Woche' })).toBeVisible()
+
+  // WOCHE
   await page.getByRole('button', { name: 'WOCHE' }).click()
   await expect(page.getByText(/Woche 8 · Block 2/)).toBeVisible()
-  await expect(page.getByRole('button', { name: /Rumpf vom 11\.11\. öffnen/ })).toContainText('läuft')
+  await expect(page.getByRole('button', { name: /Rumpf vom 11\.11\. öffnen/ })).toContainText('erledigt')
   await expect(page.getByText('Verlauf')).toBeVisible()
   await shot(page, 'm3-week')
 
-  // STATUS
+  // STATUS ohne Mark und Punkte; Zuwachs als Konsistenzwert
   await page.getByRole('button', { name: 'STATUS' }).click()
-  await expect(page.getByText('Nächste Stufe')).toBeVisible()
-  const pointsRow = page.locator('div', { hasText: /^Punkte gesamt/ }).last()
-  const pointsOf = async () => (await pointsRow.innerText()).replace(/\D/g, '')
-  const before = await pointsOf()
+  await expect(page.getByText('Nächste Stufe')).toHaveCount(0)
+  await expect(page.getByText('Punkte gesamt')).toHaveCount(0)
+  const gainRow = page.locator('div', { hasText: /^Zuwachs rechts gegenüber Baseline/ }).last()
+  const gainOf = async () => (await gainRow.innerText()).replace(/\s+/g, ' ')
+  const before = await gainOf()
   await shot(page, 'm3-status-top')
-  await page.getByRole('heading', { name: 'Knie-Protokoll' }).scrollIntoViewIfNeeded()
-  await shot(page, 'm3-status-knee')
   await page.getByRole('heading', { name: 'Körpergewicht' }).scrollIntoViewIfNeeded()
   await shot(page, 'm3-status-weight')
   await page.getByRole('heading', { name: 'Übungsverlauf' }).scrollIntoViewIfNeeded()
+  await expect(page.getByRole('combobox')).toContainText('Plank mit Gewicht')
   await shot(page, 'm3-status-exercise')
 
   // Wägung speichern
   await page.getByRole('textbox', { name: 'Gewicht' }).fill('89,9')
   await page.getByRole('button', { name: 'Wägung speichern' }).click()
   await expect(page.getByText('11.11.2026 · 89,9 kg')).toBeVisible()
-  // Übungsverlauf kennt die freie Übung unter ihrem Namen
-  await expect(page.getByRole('combobox')).toContainText('Plank mit Gewicht')
 
-  // Abgeschlossene Einheit öffnen und einen Satz korrigieren (rechtes Bein drastisch schwächer → Bestwert-Bonus entfällt)
+  // Abgeschlossene Einheit öffnen und Sätze korrigieren (rechtes Bein drastisch schwächer → Zuwachs ändert sich)
   await page.getByRole('button', { name: 'WOCHE' }).click()
   await page.getByRole('button', { name: /Unterkörper A.*vom 09\.11\. öffnen/ }).click()
   await expect(page.getByText('Einheit korrigieren')).toBeVisible()
@@ -115,11 +128,12 @@ test('Übersichten mit Beispieldaten, Korrektur, Löschen und Wiederherstellen',
   await page.getByRole('button', { name: 'Zur Übersicht' }).click()
   await page.getByRole('button', { name: 'Schließen' }).click()
   await page.getByRole('button', { name: 'STATUS' }).click()
-  const after = await pointsOf()
-  expect(Number(after)).toBe(Number(before) - 25) // Bestwert-Bonus rechts entfällt
+  const after = await gainOf()
+  expect(after).not.toBe(before)
 
-  // SYSTEM: Export, alles löschen, wieder einspielen → gleicher Punktestand
+  // SYSTEM: Export, alles löschen, wieder einspielen → gleicher Stand
   await page.getByRole('button', { name: 'SYSTEM' }).click()
+  await expect(page.getByRole('radio', { name: 'Tagebuch' })).toBeChecked()
   await shot(page, 'm3-system')
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Backup erstellen' }).click()])
   const backupPath = await download.path()
@@ -129,7 +143,7 @@ test('Übersichten mit Beispieldaten, Korrektur, Löschen und Wiederherstellen',
   await expect(page.getByText('Einrichtung', { exact: true })).toBeVisible()
   await importSeed(page, backupPath)
   await page.getByRole('button', { name: 'STATUS' }).click()
-  expect(await pointsOf()).toBe(after)
+  expect(await gainOf()).toBe(after)
 
   expect(errors).toEqual([])
 })

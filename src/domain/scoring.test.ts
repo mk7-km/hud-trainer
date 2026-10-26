@@ -105,7 +105,11 @@ describe('Abschluss einer Einheit', () => {
     expect(doneUnits(s.id, sets, [check('a', true), check('b', false)], { physio_cooldown: 2 })).toBe(2)
     expect(doneUnits(s.id, sets, [check('a', true), check('b', true)], { physio_cooldown: 2 })).toBe(3)
   })
-  it('ab 80 % abgeschlossen, darunter abgebrochen', () => {
+  it('Tagebuch: alles Protokollierte zählt, nur Leeres gilt als abgebrochen', () => {
+    expect(finishStatus(plan, 1, 25, 'diary')).toBe('completed')
+    expect(finishStatus(plan, 0, 25, 'diary')).toBe('aborted')
+  })
+  it('Coach: ab 80 % abgeschlossen, darunter abgebrochen', () => {
     expect(finishStatus(plan, 8, 10)).toBe('completed')
     expect(finishStatus(plan, 7, 10)).toBe('aborted')
     expect(finishStatus(plan, 17, 21)).toBe('completed') // Bezug: angepasste Satzzahl
