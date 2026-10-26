@@ -15,15 +15,16 @@ export function useDerived(plan: Plan) {
   const kneeChecks = useApp((st) => st.kneeChecks)
   const kneeEvents = useApp((st) => st.kneeEvents)
   const marksReached = useApp((st) => st.marksReached)
+  const planArchive = useApp((st) => st.planArchive)
   const today = useApp((st) => st.today)
 
   return useMemo(() => {
     // Im Reparaturmodus sind Mark und Punkte eingefroren: Stichtag ist der Beginn der Reparatur.
     const asOf = settings.repairMode && settings.repairSince ? settings.repairSince : today
     const ctx = dayContext(plan, settings, today)
-    const week = weekSummary(plan, sessions, mondayOf(today))
-    const streak = streaks(plan, sessions, settings, asOf)
-    const pts = points(plan, sessions, sets)
+    const week = weekSummary(plan, sessions, mondayOf(today), planArchive, today)
+    const streak = streaks(plan, sessions, settings, asOf, planArchive)
+    const pts = points(plan, sessions, sets, planArchive, today)
     const sym = symmetry(plan, sets, asOf)
     const base = baseline(plan, sets, sessions)
     const gain = rightGain(plan, sets, base, asOf)
@@ -38,8 +39,8 @@ export function useDerived(plan: Plan) {
     }
     const reachedLevel = highestReached(marksReached)
     const earnedLevel = advanceMarks(plan, reachedLevel, facts)
-    return { ctx, week, streak, points: pts, symmetry: sym, baseline: base, gain, facts, reachedLevel, earnedLevel }
-  }, [plan, settings, sessions, sets, kneeChecks, kneeEvents, marksReached, today])
+    return { ctx, week, streak, points: pts, symmetry: sym, baseline: base, gain, facts, reachedLevel, earnedLevel, planArchive }
+  }, [plan, settings, sessions, sets, kneeChecks, kneeEvents, marksReached, planArchive, today])
 }
 
 export type Derived = ReturnType<typeof useDerived>

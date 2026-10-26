@@ -38,8 +38,9 @@ export interface SessionLog {
   sessionTemplateId: string
   /** Schnappschüsse, damit alte Logs nach einem Planwechsel lesbar bleiben. */
   sessionName: string
+  /** 'bonus' nur in Logs aus Plan 1.0. */
   sessionType: 'pflicht' | 'bonus'
-  focus: 'lower' | 'upper' | 'cardio'
+  focus: 'lower' | 'upper' | 'core' | 'cardio'
   planVersion: string
   programWeek: number
   weekType: WeekType
@@ -54,6 +55,8 @@ export interface SessionLog {
   plannedUnits: number
   /** Wahl bei chooseOne: Item-Index → exerciseId. */
   choices: Record<string, string>
+  /** Freie Übungswahl (freeChoice): Item-Index → eingegebener Übungsname. Fehlt in Logs vor Plan 1.1. */
+  freeNames?: Record<string, string>
   skipped: { exerciseId: string; reason: SkipReason }[]
 }
 

@@ -154,7 +154,7 @@ function Main({ plan }: { plan: Plan }) {
           </button>
         ))}
       </nav>
-      <TooSoonDialog plan={plan} />
+      <TooSoonDialog />
       <OpDoneDialog plan={plan} derived={derived} />
       <MarkUpOverlay />
     </div>

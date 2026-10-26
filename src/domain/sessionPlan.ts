@@ -38,6 +38,9 @@ export interface ResolvedItem {
   schonmodus: boolean
   /** Offene Wahl bei chooseOne. */
   options: { exerciseId: string; name: string }[] | null
+  /** Freie Übungswahl: Name wird vor dem ersten Satz eingegeben und ist dann Variante und Anzeigename. */
+  freeChoice: boolean
+  freeName: string | null
   units: number
 }
 
@@ -83,6 +86,7 @@ export function resolveSession(
   ctx: Ctx,
   knee: KneeStatus,
   choices: Record<string, string> = {},
+  freeNames: Record<string, string> = {},
 ): ResolvedSession {
   const template = plan.sessions.find((s) => s.id === sessionId)
   if (!template) throw new Error(`Unbekannte Einheit: ${sessionId}`)
@@ -99,7 +103,11 @@ export function resolveSession(
   template.items.forEach((item, index) => {
     const open = item.chooseOne !== undefined && choices[String(index)] === undefined
     const exerciseId = item.exerciseId ?? choices[String(index)] ?? item.chooseOne![0]!
-    const { ex, variantId, variantLabel } = effectiveExercise(plan, exerciseId, ctx.block, item.overrides)
+    const resolvedEx = effectiveExercise(plan, exerciseId, ctx.block, item.overrides)
+    const { ex } = resolvedEx
+    const freeName = ex.freeChoice ? freeNames[String(index)]?.trim() || null : null
+    const variantId = freeName ?? resolvedEx.variantId
+    const variantLabel = freeName ? null : resolvedEx.variantLabel
 
     const reason = removal(plan, ex, ctx, knee)
     if (reason) {
@@ -123,7 +131,7 @@ export function resolveSession(
       exerciseId,
       variantId,
       variantLabel,
-      name: ex.name,
+      name: freeName ?? ex.name,
       logType: ex.logType,
       category: ex.category,
       unilateral,
@@ -152,6 +160,8 @@ export function resolveSession(
       options: open
         ? item.chooseOne!.map((id) => ({ exerciseId: id, name: plan.exercises[id]!.name }))
         : null,
+      freeChoice: ex.freeChoice === true,
+      freeName,
       units: counted ? sides.reduce((n, s) => n + s.sets, 0) : 1,
     })
   })

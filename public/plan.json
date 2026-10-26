@@ -1,9 +1,13 @@
 {
   "schemaVersion": 1,
-  "planVersion": "1.0.0",
+  "planVersion": "1.1.0",
   "planId": "phase1-prehab",
-  "createdAt": "2026-09-21",
-  "approvedBy": "Physiotherapeutin, 2026-09",
+  "createdAt": "2026-10-26",
+  "approval": {
+    "basedOn": "1.0.0, freigegeben von der Physiotherapeutin 09/2026",
+    "changesReviewedByPhysio": false,
+    "note": "Struktur und Übungsauswahl 1.1 vom Nutzer festgelegt. Physio sieht sich die Änderungen noch an."
+  },
   "language": "de",
   "phase": {
     "id": "phase1",
@@ -15,7 +19,7 @@
     "tempo": "Sekunden: Ablassen – Halten – Heben. 5-2-2 = 5 s ab, 2 s halten, 2 s hoch (von der Physio bestätigt).",
     "rir": "Wiederholungen in Reserve am Satzende.",
     "unilateral": "Einbeinig/einseitig. Rechts beginnt, beide Seiten werden getrennt protokolliert.",
-    "source": "physio = Übung aus dem Plan der Physiotherapeutin, coach = ergänzt."
+    "source": "physio = Übung aus dem Plan der Physiotherapeutin, coach = ergänzt, user = vom Nutzer frei gewählt."
   },
   "globalRules": {
     "maxKneeFlexionUnderLoadDeg": 90,
@@ -34,8 +38,7 @@
     "weekStartsOn": "monday",
     "timezone": "Europe/Vienna",
     "pflichtPerWeek": 4,
-    "bonusPerWeek": 2,
-    "minHoursBetweenLowerSessions": 48,
+    "bonusPerWeek": 0,
     "weeks": [
       {
         "from": 1,
@@ -98,7 +101,37 @@
       "restDaysBeforeOp": 2,
       "opWeekCountsForStreak": false,
       "note": "Nichts Neues, kein Muskelkater. Die letzten 2 Tage frei. Das Knie geht reizfrei in die OP."
-    }
+    },
+    "fixedWeekdays": false,
+    "recommendedOrder": [
+      "lower_a",
+      "upper",
+      "lower_b",
+      "core"
+    ],
+    "eachSessionPerWeek": 1,
+    "spacingRules": [
+      {
+        "id": "lower_48h",
+        "sessions": [
+          "lower_a",
+          "lower_b"
+        ],
+        "minHours": 48,
+        "severity": "confirm",
+        "text": "Zwischen den beiden Unterkörper-Einheiten mindestens 48 Stunden."
+      },
+      {
+        "id": "core_lower_a",
+        "sessions": [
+          "core",
+          "lower_a"
+        ],
+        "notOnConsecutiveDays": true,
+        "severity": "confirm",
+        "text": "Rumpf und Unterkörper A nicht an aufeinanderfolgenden Tagen (beide belasten den unteren Rücken stark)."
+      }
+    ]
   },
   "kneeCheck": {
     "askBeforeEverySession": true,
@@ -153,18 +186,16 @@
       "action": "Plan wie geschrieben."
     },
     "yellow": {
-      "action": "Schonmodus: Sprünge, Step-downs und Ausfallschritte streichen. Lasten an Beingeräten, Kniebeuge und Kreuzheben minus 20 %. Isometrie erlaubt.",
+      "action": "Schonmodus: Sprünge und Ausfallschritte streichen. Lasten an Beingeräten, Kniebeuge und Kreuzheben minus 20 %.",
       "loadFactor": 0.8,
       "countsForProgression": false,
       "countsForSymmetry": false,
       "pointsPenalty": false
     },
     "red": {
-      "action": "Kein Beintraining, nur Oberkörper. Physio informieren. Bei Blockade oder Einklemmen sofort den Operateur kontaktieren.",
+      "action": "Kein Beintraining. Oberkörper und Rumpf sind erlaubt. Physio informieren. Bei Blockade oder Einklemmen sofort den Operateur kontaktieren.",
       "lowerSessions": "suspend",
-      "upperSessions": "skipKneeLoadedItems",
-      "cardio": "skip",
-      "mobility": "allowed",
+      "otherSessions": "skipKneeLoadedItems",
       "suspendedCountsAsFulfilled": true
     },
     "events": {
@@ -204,11 +235,8 @@
   },
   "points": {
     "pflichtSession": 100,
-    "bonusSession": 50,
     "weekAllPflicht": 200,
-    "perfectWeekExtra": 100,
     "newRightLegRecord": 25,
-    "redReplacementMobility": 50,
     "sessionCompleteThreshold": 0.8,
     "note": "Einheit zählt ab 80 % der geplanten Sätze. Darunter: abgebrochen, 0 Punkte. Punkte werden aus den Logs berechnet, nicht separat gespeichert."
   },
@@ -336,10 +364,9 @@
     {
       "id": "lower_a",
       "order": 1,
-      "name": "Unterkörper A: Quadrizeps",
+      "name": "Unterkörper A",
       "type": "pflicht",
       "focus": "lower",
-      "suggestedWeekday": "mon",
       "durationMin": 70,
       "warmup": [
         "Rad mind. 5–8 min (Physio)",
@@ -351,7 +378,7 @@
           "exerciseId": "squat_barbell"
         },
         {
-          "exerciseId": "legpress_bilateral"
+          "exerciseId": "deadlift"
         },
         {
           "exerciseId": "legpress_single"
@@ -360,13 +387,7 @@
           "exerciseId": "legext_single"
         },
         {
-          "exerciseId": "wallsit_weighted"
-        },
-        {
-          "exerciseId": "deadbug_legs"
-        },
-        {
-          "exerciseId": "pushup_rotation"
+          "exerciseId": "legcurl_single"
         },
         {
           "exerciseId": "physio_cooldown"
@@ -374,15 +395,13 @@
       ]
     },
     {
-      "id": "upper_a",
+      "id": "upper",
       "order": 2,
-      "name": "Oberkörper A: Brust und Arme",
+      "name": "Oberkörper",
       "type": "pflicht",
       "focus": "upper",
-      "suggestedWeekday": "tue",
       "durationMin": 65,
       "warmup": [
-        "Gelenke mobilisieren, Schwunggymnastik für Wirbelsäule, Arme und Hüfte, ca. 5 min (Physio)",
         "Zwei Aufwärmsätze Bankdrücken"
       ],
       "items": [
@@ -390,10 +409,16 @@
           "exerciseId": "bench_press"
         },
         {
+          "exerciseId": "cable_fly"
+        },
+        {
           "exerciseId": "incline_db_press"
         },
         {
           "exerciseId": "lat_pulldown_wide"
+        },
+        {
+          "exerciseId": "cable_row_close"
         },
         {
           "exerciseId": "lateral_raise"
@@ -407,70 +432,39 @@
           "supersetGroup": "arms"
         },
         {
-          "exerciseId": "knee_iso_legext"
-        },
-        {
-          "exerciseId": "calf_raise_stepper"
-        }
-      ]
-    },
-    {
-      "id": "bonus_bike_mobility",
-      "order": 3,
-      "name": "Rad und Mobility",
-      "type": "bonus",
-      "focus": "cardio",
-      "suggestedWeekday": "wed",
-      "durationMin": 55,
-      "warmup": [],
-      "items": [
-        {
-          "exerciseId": "bike_z2"
-        },
-        {
-          "exerciseId": "mobility_block"
+          "exerciseId": "abs_free"
         }
       ]
     },
     {
       "id": "lower_b",
-      "order": 4,
-      "name": "Unterkörper B: hintere Kette und einbeinig",
+      "order": 3,
+      "name": "Unterkörper B",
       "type": "pflicht",
       "focus": "lower",
-      "suggestedWeekday": "thu",
-      "durationMin": 75,
+      "durationMin": 55,
       "warmup": [
         "Rad mind. 5–8 min (Physio)",
-        "Storchenschritt 2 × 10 Schritte je Seite, ab Woche 3 mit 10 kg (Physio)",
-        "Zwei Aufwärmsätze Kreuzheben"
+        "Storchenschritt 2 × 10 Schritte je Seite, ab Woche 3 mit 10 kg (Physio)"
       ],
       "items": [
         {
           "exerciseId": "jump_bilateral_band"
         },
         {
-          "exerciseId": "deadlift"
-        },
-        {
-          "exerciseId": "legcurl_single"
+          "exerciseId": "legpress_bilateral"
         },
         {
           "exerciseId": "lunge"
         },
         {
-          "exerciseId": "stepdown_lateral"
+          "exerciseId": "calf_raise_stepper"
         },
         {
-          "exerciseId": "bridge",
-          "supersetGroup": "core"
+          "exerciseId": "wallsit_weighted"
         },
         {
-          "exerciseId": "cable_rotation_ball",
-          "supersetGroup": "core"
-        },
-        {
-          "exerciseId": "side_bend_bench"
+          "exerciseId": "bridge_ball_curl"
         },
         {
           "exerciseId": "physio_cooldown"
@@ -478,79 +472,37 @@
       ]
     },
     {
-      "id": "upper_b",
-      "order": 5,
-      "name": "Oberkörper B: Rücken, Schultern, zweiter Brustreiz",
+      "id": "core",
+      "order": 4,
+      "name": "Rumpf",
       "type": "pflicht",
-      "focus": "upper",
-      "suggestedWeekday": "fri",
-      "durationMin": 75,
-      "warmup": [
-        "Gelenke mobilisieren, Schwunggymnastik für Wirbelsäule, Arme und Hüfte, ca. 5 min (Physio)",
-        "2 min BWS-Mobilität (Katze-Kuh, Rotation)",
-        "Zwei Aufwärmsätze Rudern"
-      ],
+      "focus": "core",
+      "durationMin": 45,
+      "warmup": [],
       "items": [
         {
           "exerciseId": "barbell_row"
         },
         {
-          "exerciseId": "chest_press_flat"
+          "exerciseId": "deadbug_legs"
         },
         {
-          "exerciseId": "lat_pulldown_close"
-        },
-        {
-          "exerciseId": "face_pull",
-          "supersetGroup": "shoulder"
-        },
-        {
-          "exerciseId": "lateral_raise",
-          "supersetGroup": "shoulder",
-          "overrides": {
-            "sets": 2
-          }
-        },
-        {
-          "exerciseId": "hammer_curl",
-          "supersetGroup": "arms"
-        },
-        {
-          "exerciseId": "triceps_overhead_cable",
-          "supersetGroup": "arms"
+          "exerciseId": "cable_rotation_ball"
         },
         {
           "exerciseId": "back_extension_45"
         },
         {
+          "exerciseId": "side_bend_bench"
+        },
+        {
           "exerciseId": "jefferson_curl_kb"
         },
         {
-          "exerciseId": "knee_iso_legext"
+          "exerciseId": "pushup_rotation"
         },
         {
-          "exerciseId": "calf_raise_stepper"
-        }
-      ]
-    },
-    {
-      "id": "bonus_swim_bike",
-      "order": 6,
-      "name": "Schwimmen oder Rad, danach Mobility",
-      "type": "bonus",
-      "focus": "cardio",
-      "suggestedWeekday": "sat",
-      "durationMin": 50,
-      "warmup": [],
-      "items": [
-        {
-          "chooseOne": [
-            "swim_crawl",
-            "bike_saturday"
-          ]
-        },
-        {
-          "exerciseId": "mobility_block"
+          "exerciseId": "abs_free"
         }
       ]
     }
@@ -598,9 +550,9 @@
         }
       }
     },
-    "legpress_bilateral": {
-      "id": "legpress_bilateral",
-      "name": "Beinpresse beidbeinig",
+    "deadlift": {
+      "id": "deadlift",
+      "name": "Kreuzheben",
       "source": "physio",
       "category": "strength",
       "logType": "weight_reps",
@@ -609,22 +561,21 @@
         6,
         8
       ],
-      "tempo": "5-2-2",
+      "tempo": "3-1-1",
       "restSec": [
         120,
         180
       ],
       "targetRIR": [
-        2,
-        2
+        3,
+        4
       ],
       "incrementKg": 5,
-      "progression": "double",
-      "kneeLoad": "machine",
+      "progression": "technique",
+      "kneeLoad": "free",
       "yellow": "reduce20",
       "red": "skip",
-      "maxKneeFlexionDeg": 90,
-      "hint": "Bis 90°. Langsamer Sehnen-Satz: 5 s ab, 2 s halten, 2 s hoch."
+      "hint": "Rücken neutral. Kommt nach der Kniebeuge, also ermüdet: RIR 3–4 strikt einhalten. Lässt die Technik am Satzende nach, ist der Satz vorbei."
     },
     "legpress_single": {
       "id": "legpress_single",
@@ -687,6 +638,196 @@
       "red": "skip",
       "hint": "Polster etwas höher am Schienbein ansetzen (weniger Schub nach vorne). Rechts beginnt. Symmetrie-Übung."
     },
+    "legcurl_single": {
+      "id": "legcurl_single",
+      "name": "Beinbeuger am Gerät einbeinig",
+      "source": "physio",
+      "category": "strength",
+      "logType": "weight_reps",
+      "unilateral": true,
+      "symmetry": true,
+      "symmetryGroup": "ham",
+      "sets": 3,
+      "reps": [
+        8,
+        12
+      ],
+      "tempo": "2-0-3",
+      "restSec": [
+        60,
+        90
+      ],
+      "targetRIR": [
+        1,
+        2
+      ],
+      "incrementKg": 2.5,
+      "progression": "double",
+      "kneeLoad": "machine",
+      "yellow": "reduce20",
+      "red": "skip",
+      "hint": "Rechts beginnt. Symmetrie-Übung."
+    },
+    "physio_cooldown": {
+      "id": "physio_cooldown",
+      "name": "Dehn- und Massageblock (Physio)",
+      "source": "physio",
+      "category": "cooldown",
+      "logType": "checklist",
+      "kneeLoad": "none",
+      "checklist": [
+        {
+          "id": "cd_heels",
+          "text": "Vierfüßerstand, Richtung Fersen setzen (ev. Handtuch in der Kniekehle)",
+          "dose": "mind. 30 s"
+        },
+        {
+          "id": "cd_deep_squat",
+          "text": "Tiefe Hocke mit Anhalten an der Stange, vorsichtig und unbelastet",
+          "dose": "mind. 30 s"
+        },
+        {
+          "id": "cd_quad",
+          "text": "Im Stehen Ferse zum Gesäß ziehen",
+          "dose": "mind. 30 s"
+        },
+        {
+          "id": "cd_calf",
+          "text": "Wade dehnen",
+          "dose": "mind. 30 s"
+        },
+        {
+          "id": "cd_massage",
+          "text": "Massage mit der Langhantel",
+          "dose": "nach Gefühl"
+        }
+      ]
+    },
+    "jump_bilateral_band": {
+      "id": "jump_bilateral_band",
+      "name": "Jump beidbeinig mit Band",
+      "source": "physio",
+      "category": "plyo",
+      "logType": "reps",
+      "sets": 3,
+      "reps": [
+        6,
+        6
+      ],
+      "restSec": [
+        60,
+        60
+      ],
+      "kneeLoad": "impact",
+      "greenOnly": true,
+      "yellow": "skip",
+      "red": "skip",
+      "hint": "Nur bei GRÜN. Leise landen, Knie über Fuß, keine Drehung."
+    },
+    "legpress_bilateral": {
+      "id": "legpress_bilateral",
+      "name": "Beinpresse beidbeinig",
+      "source": "physio",
+      "category": "strength",
+      "logType": "weight_reps",
+      "sets": 3,
+      "reps": [
+        6,
+        8
+      ],
+      "tempo": "5-2-2",
+      "restSec": [
+        120,
+        180
+      ],
+      "targetRIR": [
+        2,
+        2
+      ],
+      "incrementKg": 5,
+      "progression": "double",
+      "kneeLoad": "machine",
+      "yellow": "reduce20",
+      "red": "skip",
+      "maxKneeFlexionDeg": 90,
+      "hint": "Bis 90°. Langsamer Sehnen-Satz: 5 s ab, 2 s halten, 2 s hoch."
+    },
+    "lunge": {
+      "id": "lunge",
+      "name": "Ausfallschritt",
+      "source": "physio",
+      "category": "strength",
+      "logType": "weight_reps",
+      "unilateral": true,
+      "symmetry": false,
+      "sets": 3,
+      "reps": [
+        6,
+        8
+      ],
+      "restSec": [
+        90,
+        90
+      ],
+      "targetRIR": [
+        2,
+        2
+      ],
+      "incrementKg": 2,
+      "weightNote": "pro Hantel, 0 = Körpergewicht",
+      "bodyweightAllowed": true,
+      "progression": "double",
+      "kneeLoad": "free",
+      "yellow": "skip",
+      "red": "skip",
+      "maxKneeFlexionDeg": 90,
+      "hint": "Vorderes Knie max. 90°, Knie bleibt über der zweiten Zehe und kippt nicht nach innen.",
+      "variantsByBlock": {
+        "1": {
+          "variantId": "static",
+          "label": "statisch",
+          "tempo": "5-2-2"
+        },
+        "2": {
+          "variantId": "dynamic_reverse",
+          "label": "dynamisch rückwärts",
+          "tempo": "2-0-1"
+        },
+        "3": {
+          "variantId": "dynamic_forward",
+          "label": "dynamisch vorwärts",
+          "tempo": "2-0-1"
+        }
+      }
+    },
+    "calf_raise_stepper": {
+      "id": "calf_raise_stepper",
+      "name": "Zehenstände am Stepper",
+      "source": "physio",
+      "category": "strength",
+      "logType": "weight_reps",
+      "sets": 3,
+      "reps": [
+        10,
+        15
+      ],
+      "tempo": "2-1-3",
+      "restSec": [
+        60,
+        60
+      ],
+      "targetRIR": [
+        1,
+        2
+      ],
+      "incrementKg": 2.5,
+      "bodyweightAllowed": true,
+      "progression": "double",
+      "kneeLoad": "low",
+      "yellow": "keep",
+      "red": "skip",
+      "hint": "Voller Bewegungsweg. Einbeinig, sobald sauber."
+    },
     "wallsit_weighted": {
       "id": "wallsit_weighted",
       "name": "Hocke an der Wand mit Gewicht",
@@ -710,45 +851,27 @@
       "red": "skip",
       "hint": "Kniewinkel ca. 60–70°."
     },
-    "deadbug_legs": {
-      "id": "deadbug_legs",
-      "name": "Rückenlage: LWS-Position halten, Beine abwechselnd ausstrecken",
+    "bridge_ball_curl": {
+      "id": "bridge_ball_curl",
+      "name": "Becken heben am Gymnastikball mit Beincurl",
       "source": "physio",
-      "category": "core",
+      "category": "strength",
       "logType": "reps",
       "sets": 3,
       "reps": [
         8,
-        8
+        12
       ],
-      "perSide": true,
-      "tempo": "langsam",
+      "tempo": "2-1-2",
       "restSec": [
-        45,
-        45
+        60,
+        60
       ],
-      "kneeLoad": "none",
-      "hint": "Kopf abgelegt, LWS leicht weg vom Boden, Bauch nach innen."
-    },
-    "pushup_rotation": {
-      "id": "pushup_rotation",
-      "name": "Liegestützposition mit Rotation",
-      "source": "physio",
-      "category": "core",
-      "logType": "reps",
-      "sets": 2,
-      "reps": [
-        6,
-        8
-      ],
-      "perSide": true,
-      "tempo": "kontrolliert",
-      "restSec": [
-        45,
-        45
-      ],
-      "kneeLoad": "none",
-      "hint": "Diagonale Rumpfarbeit."
+      "kneeLoad": "low",
+      "yellow": "keep",
+      "red": "skip",
+      "hint": "Becken oben halten, Fersen zum Gesäß ziehen.",
+      "unilateral": false
     },
     "bench_press": {
       "id": "bench_press",
@@ -774,13 +897,38 @@
       "progression": "double",
       "kneeLoad": "none"
     },
+    "cable_fly": {
+      "id": "cable_fly",
+      "name": "Butterfly am Seilzug",
+      "source": "coach",
+      "category": "strength",
+      "logType": "weight_reps",
+      "sets": 3,
+      "reps": [
+        12,
+        15
+      ],
+      "tempo": "2-1-1",
+      "restSec": [
+        60,
+        60
+      ],
+      "targetRIR": [
+        1,
+        2
+      ],
+      "incrementKg": 2.5,
+      "weightNote": "pro Seite",
+      "progression": "double",
+      "kneeLoad": "none"
+    },
     "incline_db_press": {
       "id": "incline_db_press",
       "name": "Schrägbankdrücken Kurzhantel",
       "source": "coach",
       "category": "strength",
       "logType": "weight_reps",
-      "sets": 4,
+      "sets": 3,
       "reps": [
         8,
         12
@@ -824,13 +972,38 @@
       "kneeLoad": "none",
       "hint": "Alternativ Klimmzug: kontrolliert absteigen, nicht abspringen."
     },
+    "cable_row_close": {
+      "id": "cable_row_close",
+      "name": "Rudern eng am Kabel",
+      "source": "coach",
+      "category": "strength",
+      "logType": "weight_reps",
+      "sets": 3,
+      "reps": [
+        10,
+        12
+      ],
+      "tempo": "2-1-1",
+      "restSec": [
+        90,
+        90
+      ],
+      "targetRIR": [
+        1,
+        2
+      ],
+      "incrementKg": 2.5,
+      "progression": "double",
+      "kneeLoad": "none",
+      "hint": "Oberkörper ruhig, Schulterblätter am Ende zusammenziehen."
+    },
     "lateral_raise": {
       "id": "lateral_raise",
       "name": "Seitheben",
       "source": "coach",
       "category": "strength",
       "logType": "weight_reps",
-      "sets": 3,
+      "sets": 4,
       "reps": [
         12,
         15
@@ -856,7 +1029,7 @@
       "source": "coach",
       "category": "strength",
       "logType": "weight_reps",
-      "sets": 3,
+      "sets": 4,
       "reps": [
         8,
         12
@@ -881,7 +1054,7 @@
       "source": "coach",
       "category": "strength",
       "logType": "weight_reps",
-      "sets": 3,
+      "sets": 4,
       "reps": [
         10,
         15
@@ -900,307 +1073,9 @@
       "progression": "double",
       "kneeLoad": "none"
     },
-    "knee_iso_legext": {
-      "id": "knee_iso_legext",
-      "name": "Knie-Block: Kniestrecker isometrisch",
-      "source": "coach",
-      "category": "isometric",
-      "logType": "weight_time",
-      "unilateral": true,
-      "symmetry": false,
-      "setsBySide": {
-        "R": 4,
-        "L": 2
-      },
-      "seconds": [
-        45,
-        45
-      ],
-      "tempo": "halten bei ca. 60°",
-      "restSec": [
-        60,
-        60
-      ],
-      "incrementKg": 2.5,
-      "progression": "manual",
-      "kneeLoad": "isometric",
-      "yellow": "keep",
-      "red": "skip",
-      "hint": "Ca. 70 % Anstrengung, schmerzarm. Dient der Sehnenbelastung."
-    },
-    "calf_raise_stepper": {
-      "id": "calf_raise_stepper",
-      "name": "Zehenstände am Stepper",
-      "source": "physio",
-      "category": "strength",
-      "logType": "weight_reps",
-      "sets": 3,
-      "reps": [
-        10,
-        15
-      ],
-      "tempo": "2-1-3",
-      "restSec": [
-        60,
-        60
-      ],
-      "targetRIR": [
-        1,
-        2
-      ],
-      "incrementKg": 2.5,
-      "bodyweightAllowed": true,
-      "progression": "double",
-      "kneeLoad": "low",
-      "yellow": "keep",
-      "red": "skip",
-      "hint": "Voller Bewegungsweg. Einbeinig, sobald sauber."
-    },
-    "jump_bilateral_band": {
-      "id": "jump_bilateral_band",
-      "name": "Jump beidbeinig mit Band",
-      "source": "physio",
-      "category": "plyo",
-      "logType": "reps",
-      "sets": 3,
-      "reps": [
-        6,
-        6
-      ],
-      "restSec": [
-        60,
-        60
-      ],
-      "kneeLoad": "impact",
-      "greenOnly": true,
-      "yellow": "skip",
-      "red": "skip",
-      "hint": "Nur bei GRÜN. Leise landen, Knie über Fuß, keine Drehung."
-    },
-    "deadlift": {
-      "id": "deadlift",
-      "name": "Kreuzheben",
-      "source": "physio",
-      "category": "strength",
-      "logType": "weight_reps",
-      "sets": 3,
-      "reps": [
-        6,
-        8
-      ],
-      "tempo": "3-1-1",
-      "restSec": [
-        120,
-        180
-      ],
-      "targetRIR": [
-        3,
-        3
-      ],
-      "incrementKg": 5,
-      "progression": "technique",
-      "kneeLoad": "free",
-      "yellow": "reduce20",
-      "red": "skip",
-      "hint": "Rücken neutral. Steigerung nur bei sauberer Technik."
-    },
-    "legcurl_single": {
-      "id": "legcurl_single",
-      "name": "Beinbeuger am Gerät einbeinig",
-      "source": "physio",
-      "category": "strength",
-      "logType": "weight_reps",
-      "unilateral": true,
-      "symmetry": true,
-      "symmetryGroup": "ham",
-      "sets": 3,
-      "reps": [
-        8,
-        12
-      ],
-      "tempo": "2-0-3",
-      "restSec": [
-        60,
-        90
-      ],
-      "targetRIR": [
-        1,
-        2
-      ],
-      "incrementKg": 2.5,
-      "progression": "double",
-      "kneeLoad": "machine",
-      "yellow": "reduce20",
-      "red": "skip",
-      "hint": "Rechts beginnt. Symmetrie-Übung."
-    },
-    "lunge": {
-      "id": "lunge",
-      "name": "Ausfallschritt",
-      "source": "physio",
-      "category": "strength",
-      "logType": "weight_reps",
-      "unilateral": true,
-      "symmetry": false,
-      "sets": 3,
-      "reps": [
-        6,
-        8
-      ],
-      "restSec": [
-        90,
-        90
-      ],
-      "targetRIR": [
-        2,
-        2
-      ],
-      "incrementKg": 2,
-      "weightNote": "pro Hantel, 0 = Körpergewicht",
-      "bodyweightAllowed": true,
-      "progression": "double",
-      "kneeLoad": "free",
-      "yellow": "skip",
-      "red": "skip",
-      "maxKneeFlexionDeg": 90,
-      "hint": "Vorderes Knie max. 90°.",
-      "variantsByBlock": {
-        "1": {
-          "variantId": "static",
-          "label": "statisch",
-          "tempo": "5-2-2"
-        },
-        "2": {
-          "variantId": "dynamic_reverse",
-          "label": "dynamisch rückwärts",
-          "tempo": "2-0-1"
-        },
-        "3": {
-          "variantId": "dynamic_forward",
-          "label": "dynamisch vorwärts",
-          "tempo": "2-0-1"
-        }
-      }
-    },
-    "stepdown_lateral": {
-      "id": "stepdown_lateral",
-      "name": "Step-down seitlich von niedriger Stufe",
-      "source": "coach",
-      "category": "strength",
-      "logType": "reps",
-      "unilateral": true,
-      "symmetry": false,
-      "sets": 2,
-      "reps": [
-        8,
-        8
-      ],
-      "tempo": "3 s ab",
-      "restSec": [
-        60,
-        60
-      ],
-      "kneeLoad": "free",
-      "yellow": "skip",
-      "red": "skip",
-      "hint": "Stufe 10–15 cm. Knie über der zweiten Zehe, kein Einknicken nach innen."
-    },
-    "bridge": {
-      "id": "bridge",
-      "name": "Becken heben",
-      "source": "physio",
-      "category": "strength",
-      "logType": "reps",
-      "sets": 3,
-      "reps": [
-        10,
-        12
-      ],
-      "tempo": "2-2-2",
-      "restSec": [
-        0,
-        0
-      ],
-      "kneeLoad": "low",
-      "yellow": "keep",
-      "red": "skip",
-      "hint": "Im Supersatz mit der Rumpfübung.",
-      "variantsByBlock": {
-        "1": {
-          "variantId": "single_leg",
-          "label": "einbeinig",
-          "unilateral": true,
-          "reps": [
-            10,
-            12
-          ]
-        },
-        "2": {
-          "variantId": "ball_curl",
-          "label": "am Gymnastikball mit Beincurl",
-          "unilateral": false,
-          "reps": [
-            8,
-            12
-          ]
-        },
-        "3": {
-          "variantId": "ball_curl",
-          "label": "am Gymnastikball mit Beincurl",
-          "unilateral": false,
-          "reps": [
-            8,
-            12
-          ]
-        }
-      }
-    },
-    "cable_rotation_ball": {
-      "id": "cable_rotation_ball",
-      "name": "Seilzug-Rotation im Sitz auf dem Gymnastikball",
-      "source": "physio",
-      "category": "core",
-      "logType": "weight_reps",
-      "sets": 3,
-      "reps": [
-        10,
-        12
-      ],
-      "perSide": true,
-      "tempo": "kontrolliert",
-      "restSec": [
-        45,
-        45
-      ],
-      "incrementKg": 2.5,
-      "progression": "double",
-      "kneeLoad": "none",
-      "hint": "Becken und Beine bleiben ganz stabil. Diagonale Rumpfarbeit."
-    },
-    "side_bend_bench": {
-      "id": "side_bend_bench",
-      "name": "Seitneigung mit Gewicht, zur Bank abtippen",
-      "source": "physio",
-      "category": "core",
-      "logType": "weight_reps",
-      "sets": 2,
-      "reps": [
-        12,
-        12
-      ],
-      "perSide": true,
-      "tempo": "2-0-2",
-      "restSec": [
-        45,
-        45
-      ],
-      "incrementKg": 2,
-      "progression": "double",
-      "kneeLoad": "none"
-    },
     "barbell_row": {
       "id": "barbell_row",
-      "name": "Rudern mit Langhantel",
+      "name": "Rudern breit, Langhantel",
       "source": "physio",
       "category": "strength",
       "logType": "weight_reps",
@@ -1223,130 +1098,47 @@
       "kneeLoad": "none",
       "hint": "Rücken neutral; trainiert den unteren Rücken isometrisch mit."
     },
-    "chest_press_flat": {
-      "id": "chest_press_flat",
-      "name": "Brustpresse oder Kurzhantel-Bankdrücken flach",
-      "source": "coach",
-      "category": "strength",
-      "logType": "weight_reps",
+    "deadbug_legs": {
+      "id": "deadbug_legs",
+      "name": "Rückenlage: LWS-Position halten, Beine abwechselnd ausstrecken",
+      "source": "physio",
+      "category": "core",
+      "logType": "reps",
       "sets": 3,
       "reps": [
         8,
+        8
+      ],
+      "perSide": true,
+      "tempo": "langsam",
+      "restSec": [
+        45,
+        45
+      ],
+      "kneeLoad": "none",
+      "hint": "Kopf abgelegt, LWS leicht weg vom Boden, Bauch nach innen."
+    },
+    "cable_rotation_ball": {
+      "id": "cable_rotation_ball",
+      "name": "Seilzug-Rotation im Sitz auf dem Gymnastikball",
+      "source": "physio",
+      "category": "core",
+      "logType": "weight_reps",
+      "sets": 3,
+      "reps": [
+        10,
         12
       ],
-      "tempo": "2-0-1",
+      "perSide": true,
+      "tempo": "kontrolliert",
       "restSec": [
-        120,
-        120
-      ],
-      "targetRIR": [
-        1,
-        2
+        45,
+        45
       ],
       "incrementKg": 2.5,
       "progression": "double",
       "kneeLoad": "none",
-      "hint": "Immer dieselbe Variante verwenden, sonst sind die Werte nicht vergleichbar."
-    },
-    "lat_pulldown_close": {
-      "id": "lat_pulldown_close",
-      "name": "Latzug eng oder im Untergriff",
-      "source": "coach",
-      "category": "strength",
-      "logType": "weight_reps",
-      "sets": 3,
-      "reps": [
-        10,
-        12
-      ],
-      "tempo": "2-1-1",
-      "restSec": [
-        90,
-        90
-      ],
-      "targetRIR": [
-        1,
-        2
-      ],
-      "incrementKg": 2.5,
-      "progression": "double",
-      "kneeLoad": "none"
-    },
-    "face_pull": {
-      "id": "face_pull",
-      "name": "Face Pulls",
-      "source": "coach",
-      "category": "strength",
-      "logType": "weight_reps",
-      "sets": 3,
-      "reps": [
-        15,
-        20
-      ],
-      "tempo": "2-1-1",
-      "restSec": [
-        0,
-        0
-      ],
-      "targetRIR": [
-        1,
-        2
-      ],
-      "incrementKg": 2.5,
-      "progression": "double",
-      "kneeLoad": "none",
-      "hint": "Für Nacken und Schulterblatt."
-    },
-    "hammer_curl": {
-      "id": "hammer_curl",
-      "name": "Hammercurls",
-      "source": "coach",
-      "category": "strength",
-      "logType": "weight_reps",
-      "sets": 3,
-      "reps": [
-        10,
-        12
-      ],
-      "tempo": "2-0-1",
-      "restSec": [
-        0,
-        0
-      ],
-      "targetRIR": [
-        0,
-        2
-      ],
-      "incrementKg": 2,
-      "weightNote": "pro Hantel",
-      "lastSetToFailureAllowed": true,
-      "progression": "double",
-      "kneeLoad": "none"
-    },
-    "triceps_overhead_cable": {
-      "id": "triceps_overhead_cable",
-      "name": "Trizepsdrücken über Kopf am Kabel",
-      "source": "coach",
-      "category": "strength",
-      "logType": "weight_reps",
-      "sets": 3,
-      "reps": [
-        10,
-        15
-      ],
-      "tempo": "2-0-1",
-      "restSec": [
-        60,
-        60
-      ],
-      "targetRIR": [
-        0,
-        2
-      ],
-      "incrementKg": 2.5,
-      "lastSetToFailureAllowed": true,
-      "progression": "double",
-      "kneeLoad": "none"
+      "hint": "Becken und Beine bleiben ganz stabil. Diagonale Rumpfarbeit."
     },
     "back_extension_45": {
       "id": "back_extension_45",
@@ -1374,6 +1166,27 @@
       "kneeLoad": "none",
       "hint": "Zusatzgewicht, sobald 15 saubere Wiederholungen gehen."
     },
+    "side_bend_bench": {
+      "id": "side_bend_bench",
+      "name": "Seitneigung mit Gewicht, zur Bank abtippen",
+      "source": "physio",
+      "category": "core",
+      "logType": "weight_reps",
+      "sets": 2,
+      "reps": [
+        12,
+        12
+      ],
+      "perSide": true,
+      "tempo": "2-0-2",
+      "restSec": [
+        45,
+        45
+      ],
+      "incrementKg": 2,
+      "progression": "double",
+      "kneeLoad": "none"
+    },
     "jefferson_curl_kb": {
       "id": "jefferson_curl_kb",
       "name": "Stand auf Stepper mit Kettlebell: Wirbelsäule ab- und aufrollen",
@@ -1395,155 +1208,52 @@
       "progression": "manual",
       "kneeLoad": "none"
     },
-    "bike_z2": {
-      "id": "bike_z2",
-      "name": "Rad locker (Zone 2)",
-      "source": "coach",
-      "category": "cardio",
-      "logType": "duration",
-      "minutes": [
-        30,
+    "pushup_rotation": {
+      "id": "pushup_rotation",
+      "name": "Liegestützposition mit Rotation",
+      "source": "physio",
+      "category": "core",
+      "logType": "reps",
+      "sets": 2,
+      "reps": [
+        6,
+        8
+      ],
+      "perSide": true,
+      "tempo": "kontrolliert",
+      "restSec": [
+        45,
         45
       ],
-      "kneeLoad": "cyclic",
-      "yellow": "keep",
-      "red": "skip",
-      "hint": "Sprechen in ganzen Sätzen möglich, ca. 60–70 % HFmax (Apple Watch). Trittfrequenz 80–90, wenig Widerstand."
+      "kneeLoad": "none",
+      "hint": "Diagonale Rumpfarbeit."
     },
-    "swim_crawl": {
-      "id": "swim_crawl",
-      "name": "Kraulschwimmen",
-      "source": "coach",
-      "category": "cardio",
-      "logType": "duration",
-      "minutes": [
-        20,
-        30
+    "abs_free": {
+      "id": "abs_free",
+      "name": "Bauch (freie Wahl)",
+      "source": "user",
+      "category": "core",
+      "logType": "weight_reps",
+      "freeChoice": true,
+      "sets": 3,
+      "reps": [
+        10,
+        15
       ],
-      "kneeLoad": "cyclic",
-      "yellow": "keep",
-      "red": "skip",
-      "hint": "Pull-Buoy erlaubt. Kein Brustbeinschlag."
-    },
-    "bike_saturday": {
-      "id": "bike_saturday",
-      "name": "Rad",
-      "source": "coach",
-      "category": "cardio",
-      "logType": "duration",
-      "kneeLoad": "cyclic",
-      "yellow": "keep",
-      "red": "skip",
-      "variantsByBlock": {
-        "1": {
-          "variantId": "easy",
-          "label": "locker",
-          "minutes": [
-            30,
-            40
-          ],
-          "hint": "Locker wie am Mittwoch."
-        },
-        "2": {
-          "variantId": "intervals",
-          "label": "Intervalle",
-          "minutes": [
-            35,
-            45
-          ],
-          "hint": "10 min locker, dann 4–6 × 3 min zügig mit je 2 min locker, 5 min ausfahren."
-        },
-        "3": {
-          "variantId": "intervals",
-          "label": "Intervalle",
-          "minutes": [
-            35,
-            45
-          ],
-          "hint": "10 min locker, dann 4–6 × 3 min zügig mit je 2 min locker, 5 min ausfahren."
-        }
-      }
-    },
-    "mobility_block": {
-      "id": "mobility_block",
-      "name": "Mobility-Block",
-      "source": "coach",
-      "category": "mobility",
-      "logType": "checklist",
+      "restSec": [
+        60,
+        60
+      ],
+      "targetRIR": [
+        1,
+        2
+      ],
+      "bodyweightAllowed": true,
+      "incrementKg": 2.5,
+      "progression": "manual",
       "kneeLoad": "none",
-      "hint": "Keine Positionen, die das gebeugte Knie verdrehen (z. B. 90/90-Sitz).",
-      "checklist": [
-        {
-          "id": "mb_catcow",
-          "text": "Katze-Kuh im Vierfüßerstand (bei Druckschmerz rechts Unterlage)",
-          "dose": "10 Wdh."
-        },
-        {
-          "id": "mb_tspine",
-          "text": "BWS-Rotation in Seitlage",
-          "dose": "2 × 8 je Seite"
-        },
-        {
-          "id": "mb_pec",
-          "text": "Brustdehnung im Türrahmen",
-          "dose": "2 × 30 s"
-        },
-        {
-          "id": "mb_chintuck",
-          "text": "Kinn einziehen (Chin Tucks)",
-          "dose": "2 × 10"
-        },
-        {
-          "id": "mb_trap",
-          "text": "Oberen Trapez dehnen",
-          "dose": "30 s je Seite"
-        },
-        {
-          "id": "mb_hipflexor",
-          "text": "Hüftbeuger-Dehnung im Stand / Ausfallschritt (nicht auf dem rechten Knie knien, wenn unangenehm)",
-          "dose": "2 × 30 s je Seite"
-        },
-        {
-          "id": "mb_physio",
-          "text": "Dehnblock der Physio (wie nach den Beineinheiten)",
-          "dose": "je mind. 30 s"
-        }
-      ]
-    },
-    "physio_cooldown": {
-      "id": "physio_cooldown",
-      "name": "Dehn- und Massageblock (Physio)",
-      "source": "physio",
-      "category": "cooldown",
-      "logType": "checklist",
-      "kneeLoad": "none",
-      "checklist": [
-        {
-          "id": "cd_heels",
-          "text": "Vierfüßerstand, Richtung Fersen setzen (ev. Handtuch in der Kniekehle)",
-          "dose": "mind. 30 s"
-        },
-        {
-          "id": "cd_deep_squat",
-          "text": "Tiefe Hocke mit Anhalten an der Stange, vorsichtig und unbelastet",
-          "dose": "mind. 30 s"
-        },
-        {
-          "id": "cd_quad",
-          "text": "Im Stehen Ferse zum Gesäß ziehen",
-          "dose": "mind. 30 s"
-        },
-        {
-          "id": "cd_calf",
-          "text": "Wade dehnen",
-          "dose": "mind. 30 s"
-        },
-        {
-          "id": "cd_massage",
-          "text": "Massage mit der Langhantel",
-          "dose": "nach Gefühl"
-        }
-      ]
+      "freeChoiceRules": "Übungsname wird in der Einheit eingegeben (Vorschläge aus früheren Einträgen). Verlauf, Vorbelegung und Bestwerte laufen pro eingegebenem Namen.",
+      "hint": "Übung frei wählen und eintragen."
     }
   }
 }

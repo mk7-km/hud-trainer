@@ -4,7 +4,7 @@ import { makeSession, makeSets } from '../domain/testkit'
 import { rawPlan } from '../domain/testplan.node'
 import { backupFileName, exportBackup, importBackup, parseBackup, wipeUserData } from './backup'
 import { getSettings, patchSettings, TrainerDb } from './db'
-import { loadPlan } from './planLoader'
+import { loadPlan, loadRulesArchive } from './planLoader'
 
 let n = 0
 const dbs: TrainerDb[] = []
@@ -109,7 +109,27 @@ describe('Plan laden', () => {
     const d = freshDb()
     const res = await loadPlan(async () => rawPlan(), d)
     expect(res).toMatchObject({ source: 'network', error: null })
-    expect((await d.planCache.get('lastValid'))?.planVersion).toBe('1.0.0')
+    expect((await d.planCache.get('lastValid'))?.planVersion).toBe('1.1.0')
+    expect(Object.keys(await loadRulesArchive(d))).toEqual(['1.1.0'])
+  })
+
+  it('archiviert die Regeln der Vorgängerversion und nimmt sie ins Backup', async () => {
+    const d = freshDb()
+    const v1 = { ...(rawPlan() as object), planVersion: '0.9.0', schedule: { ...(rawPlan() as { schedule: object }).schedule, bonusPerWeek: 2 } }
+    await loadPlan(async () => v1, d)
+    await loadPlan(async () => rawPlan(), d)
+    const archive = await loadRulesArchive(d)
+    expect(Object.keys(archive).sort()).toEqual(['0.9.0', '1.1.0'])
+    expect(archive['0.9.0']?.bonusPerWeek).toBe(2)
+    expect(archive['1.1.0']?.bonusPerWeek).toBe(0)
+
+    const backup = await exportBackup('1.1.0', d)
+    expect(backup.planRules.map((r) => r.planVersion).sort()).toEqual(['0.9.0', '1.1.0'])
+    const target = freshDb()
+    const parsed = parseBackup(JSON.stringify(backup))
+    if (!parsed.ok) throw new Error(parsed.error)
+    await importBackup(parsed.backup, target)
+    expect((await loadRulesArchive(target))['0.9.0']?.bonusPerWeek).toBe(2)
   })
 
   it('ungültiger Plan: letzte gültige Version bleibt, mit klarer Meldung', async () => {
@@ -118,7 +138,7 @@ describe('Plan laden', () => {
     const broken = { ...(rawPlan() as object), planVersion: '2.0.0', sessions: [] }
     const res = await loadPlan(async () => broken, d)
     expect(res.source).toBe('cache')
-    expect(res.plan?.planVersion).toBe('1.0.0')
+    expect(res.plan?.planVersion).toBe('1.1.0')
     expect(res.error).toContain('ungültig')
   })
 

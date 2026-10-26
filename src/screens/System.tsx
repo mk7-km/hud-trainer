@@ -227,6 +227,11 @@ export function System({ plan, derived }: { plan: Plan; derived: Derived }) {
       <Panel title="Version">
         <Row label="App-Version" value={__APP_VERSION__} />
         <Row label="Trainingsplan" value={`${plan.planVersion} · ${plan.phase.name}`} />
+        {plan.approval?.changesReviewedByPhysio === false && (
+          <p className={s.muted} style={{ margin: '4px 0 0' }}>
+            Änderungen noch nicht von der Physio gesehen
+          </p>
+        )}
         <Row label="Startmodus" value={standalone ? 'Vollbild' : 'Browser'} />
         <Row label="Offline" value={offlineReady ? 'bereit' : 'wird vorbereitet …'} />
         <div className={s.stack} style={{ marginTop: 8 }}>

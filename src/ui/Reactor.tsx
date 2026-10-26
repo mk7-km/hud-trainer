@@ -48,7 +48,7 @@ export function Reactor({
         viewBox="0 0 300 300"
         className={styles.svg}
         role="img"
-        aria-label={`Wochenenergie: ${pflichtDone} von ${pflichtTarget} Pflichteinheiten, ${bonusDone} von ${bonusTarget} Bonuseinheiten`}
+        aria-label={`Wochenenergie: ${pflichtDone} von ${pflichtTarget} Pflichteinheiten${bonusTarget > 0 ? `, ${bonusDone} von ${bonusTarget} Bonuseinheiten` : ''}`}
       >
         <g className={styles.spinSlow}>
           <circle cx={C} cy={C} r={146} className={styles.hair} />
@@ -60,7 +60,7 @@ export function Reactor({
           })}
         </g>
 
-        {segments(bonusTarget, 14).map(([a, b], i) => (
+        {bonusTarget > 0 && segments(bonusTarget, 14).map(([a, b], i) => (
           <path key={`b${i}`} d={arc(126, a, b)} className={styles.bonus} data-on={i < bonusDone} style={{ '--i': pflichtTarget + i } as CSSProperties} />
         ))}
 

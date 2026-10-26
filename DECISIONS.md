@@ -41,6 +41,17 @@
 - **„OP erfolgt?“** wird je OP-Datum einmal gefragt. „Nein“ führt zu SYSTEM, um den Termin zu ändern; bis dahin bleiben Einheiten gesperrt.
 - **Marks nach einem Import** werden aus den Logs neu erreicht, falls das Backup keine enthält; der Aufstieg wird dann einmal angezeigt.
 
+## Plan 1.1 (26.10.2026)
+
+- **Regel-Archiv je Planversion.** Punkte, Wochenziel und Bonusregeln werden beim Laden eines gültigen Plans als `PlanRules` unter `v:<planVersion>` in `planCache` abgelegt (`src/db/planLoader.ts`); beim ersten Laden einer neuen Version wird der bisherige `lastValid` nachträglich archiviert. Vergangene Wochen zählen nach den Regeln der Planversion ihrer zuletzt begonnenen Einheit, die **laufende Woche immer nach dem aktuellen Plan**. Das Archiv wandert als `planRules` mit ins Backup; fehlt eine Version (neues Gerät ohne Backup), gelten die aktuellen Regeln. Erreichte Marks bleiben ohnehin gespeichert.
+- **Plan 1.0 bleibt schemagültig** (`bonusPerWeek`, `minHoursBetweenLowerSessions`, Bonus-Punktfelder optional), damit die Vorgängerversion archiviert werden kann und `sessionType: 'bonus'` in alten Logs lesbar bleibt. Die feste 48-Stunden-Regel eines Plans 1.0 wird in eine Abstandsregel übersetzt.
+- **Abstandsregeln** (`src/domain/spacing.ts`): `minHours` misst ab dem Ende der letzten *abgeschlossenen* Einheit aller in der Regel genannten Vorlagen (auch derselben). `notOnConsecutiveDays` schlägt bei Vortag, Folgetag und am selben Tag an, in beliebiger Reihenfolge; abgebrochene und ausgesetzte Einheiten zählen nicht. Die J.A.R.V.I.S.-Zeile hängt an der Regelart (`minHours` → `lowerTooSoon`, `notOnConsecutiveDays` → `coreLowerAConsecutive`), nicht an der Regel-ID; dazu wird der Regeltext aus dem Plan gezeigt. Start nur nach Bestätigung; WOCHE zeigt je Einheit „frühestens …“ bzw. „nicht direkt nach …“.
+- **Empfehlung auf HOME:** erste offene Einheit nach `recommendedOrder`; verletzt sie gerade eine Abstandsregel, wird die nächste offene ohne Konflikt empfohlen, sonst bleibt sie es.
+- **Freie Übungswahl (`freeChoice`):** Der eingegebene Name (mindestens 2 Zeichen) wird je Einheit und Item in `session.freeNames` gespeichert und ist zugleich `variantId` und Anzeigename der Sätze. Historie, Vorbelegung, Übungsverlauf und Bestwerte laufen damit pro Name; Oberkörper und Rumpf können verschiedene Namen tragen. Vorschläge: früher genutzte Namen, zuletzt genutzte zuerst.
+- **Reaktor** zeigt bei `bonusPerWeek: 0` keine äußeren Segmente; alte Bonuseinheiten bleiben im Verlauf als „Bonus“ sichtbar.
+- **Freigabe-Hinweis:** `approval.changesReviewedByPhysio === false` → SYSTEM zeigt unter der Plan-Version „Änderungen noch nicht von der Physio gesehen“.
+- **Vorname im Plan:** `approval.note` und `legend.source` nannten den Nutzer beim Vornamen. Weil das Repo öffentlich ist, steht dort jetzt „Nutzer“. Trainingsinhalte, Regeln und Schwellen sind unverändert. `AENDERUNG_*.md` und `plan_v*.json` sind in `.gitignore`.
+
 ## Auslegung des Datenmodells (plan.json)
 
 Wo der Plan Spielraum lässt, gilt bis zu einer Klärung mit der Physiotherapeutin die jeweils vorsichtigere Lesart.

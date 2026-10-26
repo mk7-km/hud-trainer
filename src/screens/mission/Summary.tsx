@@ -23,16 +23,17 @@ export function Summary({
 }) {
   const sessions = useApp((st) => st.sessions)
   const sets = useApp((st) => st.sets)
+  const planArchive = useApp((st) => st.planArchive)
 
   const data = useMemo(() => {
     const progress = sessionProgress(session, resolveFor(plan, session))
-    const pts = points(plan, sessions, sets).bySession.get(session.id) ?? { base: 0, records: 0 }
+    const pts = points(plan, sessions, sets, planArchive).bySession.get(session.id) ?? { base: 0, records: 0 }
     const completed = sessions.filter((x) => x.status === 'completed')
     const records = rightRecords(plan, sets, completed).get(session.id) ?? []
     const before = symmetry(plan, sets.filter((x) => x.sessionId !== session.id), session.date).index
     const after = symmetry(plan, sets, session.date).index
     return { progress, pts, records, before, after }
-  }, [plan, session, sessions, sets])
+  }, [plan, session, sessions, sets, planArchive])
 
   const completed = session.status === 'completed'
   const ratio = completionRatio(data.progress.done, data.progress.planned)

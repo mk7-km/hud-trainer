@@ -7,8 +7,8 @@ import type { SessionLog, SetLog } from './types'
 
 const plan = loadTestPlan()
 const normalCtx = { weekType: 'normal', taper: false, programWeek: 3, block: 1 } as const
-const item = (sessionId: string, exerciseId: string, knee: 'green' | 'yellow' = 'green', ctx = normalCtx) =>
-  resolveSession(plan, sessionId, ctx, knee).items.find((i) => i.exerciseId === exerciseId)!
+const item = (sessionId: string, exerciseId: string, knee: 'green' | 'yellow' = 'green', ctx = normalCtx, freeNames: Record<string, string> = {}) =>
+  resolveSession(plan, sessionId, ctx, knee, {}, freeNames).items.find((i) => i.exerciseId === exerciseId)!
 
 function history(...entries: [SessionLog, SetLog[]][]): HistoryInput {
   return {
@@ -18,7 +18,7 @@ function history(...entries: [SessionLog, SetLog[]][]): HistoryInput {
 }
 
 describe('Doppelte Progression', () => {
-  const press = item('lower_a', 'legpress_bilateral') // 3 × 6–8, RIR 2, +5 kg
+  const press = item('lower_b', 'legpress_bilateral') // 3 × 6–8, RIR 2, +5 kg
 
   it('ohne Vorgeschichte und in der Kalibrierung: Last finden', () => {
     expect(recommend(plan, press, null, history(), normalCtx).kind).toBe('find')
@@ -46,9 +46,9 @@ describe('Doppelte Progression', () => {
   })
 
   it('letzter Satz bis zum Versagen ist erlaubt, wo der Plan es zulässt', () => {
-    const curl = item('upper_a', 'ez_curl') // 8–12, RIR 0–2, lastSetToFailureAllowed
-    const s = makeSession({ date: '2026-09-29', sessionTemplateId: 'upper_a', focus: 'upper' })
-    const h = history([s, makeSets(s, 'ez_curl', null, [[30, 12, 1], [30, 12, 1], [30, 12, 0]])])
+    const curl = item('upper', 'ez_curl') // 8–12, RIR 0–2, lastSetToFailureAllowed
+    const s = makeSession({ date: '2026-09-29', sessionTemplateId: 'upper', focus: 'upper' })
+    const h = history([s, makeSets(s, 'ez_curl', null, [[30, 12, 1], [30, 12, 1], [30, 12, 1], [30, 12, 0]])])
     expect(recommend(plan, curl, null, h, normalCtx)).toMatchObject({ weightKg: 32.5, increased: true })
   })
 
@@ -73,7 +73,7 @@ describe('Doppelte Progression', () => {
   })
 
   it('Zeitübungen steigern über den oberen Sekundenwert', () => {
-    const wall = item('lower_a', 'wallsit_weighted') // 2 × 30–45 s, +2,5 kg
+    const wall = item('lower_b', 'wallsit_weighted') // 2 × 30–45 s, +2,5 kg
     const s = makeSession({ date: '2026-09-29' })
     const sets = makeSets(s, 'wallsit_weighted', null, [[10, 0], [10, 0]], { reps: null, seconds: 45 })
     const rec = recommend(plan, wall, null, history([s, sets]), normalCtx)
@@ -82,7 +82,7 @@ describe('Doppelte Progression', () => {
   })
 
   it('Körpergewicht: von 0 kg auf die erste Laststufe', () => {
-    const calf = item('upper_a', 'calf_raise_stepper')
+    const calf = item('lower_b', 'calf_raise_stepper')
     const s = makeSession({ date: '2026-09-29' })
     const h = history([s, makeSets(s, 'calf_raise_stepper', null, [[0, 15, 2], [0, 15, 2], [0, 15, 1]])])
     expect(recommend(plan, calf, null, h, normalCtx).weightKg).toBe(2.5)
@@ -95,7 +95,7 @@ describe('Schonmodus, Deload, Taper', () => {
 
   it('Gelb: Empfehlung mal loadFactor, auf 0,5 kg abgerundet', () => {
     const s = makeSession({ date: '2026-09-29' })
-    const rec = recommend(plan, item('lower_a', 'legpress_bilateral', 'yellow'), null, history([s, allTop(s)]), normalCtx)
+    const rec = recommend(plan, item('lower_b', 'legpress_bilateral', 'yellow'), null, history([s, allTop(s)]), normalCtx)
     expect(rec.weightKg).toBe(84) // (100 + 5) × 0,8
   })
 
@@ -108,7 +108,7 @@ describe('Schonmodus, Deload, Taper', () => {
       [yellow, makeSets(yellow, 'legpress_bilateral', null, [[80, 6]], { schonmodus: true })],
       [deload, makeSets(deload, 'legpress_bilateral', null, [[100, 6], [100, 6]])],
     )
-    expect(recommend(plan, item('lower_a', 'legpress_bilateral'), null, h, { ...normalCtx, programWeek: 6 })).toMatchObject({
+    expect(recommend(plan, item('lower_b', 'legpress_bilateral'), null, h, { ...normalCtx, programWeek: 6 })).toMatchObject({
       weightKg: 105,
       increased: true,
     })
@@ -117,7 +117,7 @@ describe('Schonmodus, Deload, Taper', () => {
   it('Deload und Taper: gleiche Last, keine Steigerung', () => {
     const s = makeSession({ date: '2026-09-29' })
     const h = history([s, allTop(s)])
-    const press = item('lower_a', 'legpress_bilateral')
+    const press = item('lower_b', 'legpress_bilateral')
     expect(recommend(plan, press, null, h, { ...normalCtx, weekType: 'deload' })).toMatchObject({ weightKg: 100, increased: false })
     expect(recommend(plan, press, null, h, { ...normalCtx, taper: true })).toMatchObject({ weightKg: 100, increased: false })
   })
@@ -126,7 +126,7 @@ describe('Schonmodus, Deload, Taper', () => {
     const before = makeSession({ date: '2026-09-29' })
     const current = makeSession({ date: '2026-10-06', status: 'active' })
     const h = history([before, allTop(before)], [current, makeSets(current, 'legpress_bilateral', null, [[105, 6]])])
-    expect(recommend(plan, item('lower_a', 'legpress_bilateral'), null, h, normalCtx, { currentSessionId: current.id }).weightKg).toBe(105)
+    expect(recommend(plan, item('lower_b', 'legpress_bilateral'), null, h, normalCtx, { currentSessionId: current.id }).weightKg).toBe(105)
   })
 })
 
@@ -152,23 +152,24 @@ describe('Technikübungen', () => {
 })
 
 describe('Manuell und ohne Last', () => {
-  it('manual: keine Empfehlung, letzte Werte vorbelegt', () => {
-    const iso = item('upper_a', 'knee_iso_legext')
-    const s = makeSession({ date: '2026-09-29' })
-    const sets = makeSets(s, 'knee_iso_legext', 'R', [[20, 0]], { reps: null, seconds: 45 })
-    const rec = recommend(plan, iso, 'R', history([s, sets]), normalCtx)
+  it('freie Bauchübung: manuell, letzte Werte unter demselben Namen vorbelegt', () => {
+    const idx = plan.sessions.find((t) => t.id === 'upper')!.items.findIndex((it) => it.exerciseId === 'abs_free')
+    const abs = item('upper', 'abs_free', 'green', normalCtx, { [String(idx)]: 'Crunch am Kabel' })
+    const s = makeSession({ date: '2026-09-29', sessionTemplateId: 'upper' })
+    const sets = makeSets(s, 'abs_free', null, [[20, 12]], { variantId: 'Crunch am Kabel' })
+    const rec = recommend(plan, abs, null, history([s, sets]), normalCtx)
     expect(rec.kind).toBe('manual')
-    expect(rec.prefill).toMatchObject({ weightKg: 20, seconds: 45 })
-    expect(recommend(plan, iso, 'L', history([s, sets]), normalCtx).prefill.weightKg).toBeNull()
+    expect(rec.prefill).toMatchObject({ weightKg: 20, reps: 12 })
+    expect(recommend(plan, abs, null, history(), normalCtx).prefill).toMatchObject({ weightKg: null, reps: 10 })
   })
 
   it('manual mit defaultWeightKg', () => {
-    const jc = item('upper_b', 'jefferson_curl_kb')
+    const jc = item('core', 'jefferson_curl_kb')
     expect(recommend(plan, jc, null, history(), normalCtx).prefill.weightKg).toBe(8)
   })
 
   it('reine Wiederholungsübungen haben keine Lastempfehlung', () => {
-    expect(recommend(plan, item('lower_a', 'deadbug_legs'), null, history(), normalCtx)).toMatchObject({
+    expect(recommend(plan, item('core', 'deadbug_legs'), null, history(), normalCtx)).toMatchObject({
       kind: 'none',
       prefill: { reps: 8, weightKg: null },
     })

@@ -16,7 +16,7 @@
   ],
   "homeStatusDone": [
     "Wochenziel erfüllt. Reaktor bei 100 %.",
-    "Pflicht erledigt, Sir. Bonuseinheiten stehen noch offen."
+    "Alle vier Einheiten erledigt, Sir. Regeneration läuft."
   ],
   "inactivity": [
     "Seit {days} Tagen keine Einheit, Sir. Das Knie baut sich nicht von selbst auf.",
@@ -44,17 +44,13 @@
     "Woche abgeschlossen: 4 von 4. So bleibt es, Sir.",
     "Wochenziel erreicht. Serie: {weeks} Wochen in Folge."
   ],
-  "perfectWeek": [
-    "6 von 6. Vollständig, Sir.",
-    "Perfekte Woche. Ich habe nichts zu beanstanden."
-  ],
   "weekFailed": [
     "Wochenziel verfehlt: {done} von 4. Serie beendet.",
     "Reaktor bei {pct} %. Nächste Woche ohne Ausreden, Sir."
   ],
   "lowerTooSoon": [
     "Letzte Beineinheit vor {hours} Stunden. Vorgabe sind 48, Sir.",
-    "Zu früh für die Beine. Oberkörper oder Bonuseinheit wäre die korrekte Wahl."
+    "Zu früh für die Beine. Oberkörper oder Rumpf wäre die korrekte Wahl."
   ],
   "calibrationWeek": [
     "Kalibrierungswoche: zwei Sätze pro Übung, Lasten finden. Kein Heldentum, Sir."
@@ -66,12 +62,12 @@
     "Knie-Status grün. Plan wie geschrieben."
   ],
   "kneeYellow": [
-    "Knie-Status gelb. Schonmodus aktiv: keine Sprünge, keine Step-downs, keine Ausfallschritte, Lasten minus 20 %.",
+    "Knie-Status gelb. Schonmodus aktiv: keine Sprünge, keine Ausfallschritte, Lasten minus 20 %.",
     "Schonmodus, Sir. Kein Punkteabzug, aber auch kein Ehrgeiz heute."
   ],
   "kneeRed": [
-    "Knie-Status rot. Beintraining gesperrt. Informieren Sie Ihre Physio.",
-    "Rot. Heute nur Oberkörper, Sir. Das ist keine Verhandlungssache."
+    "Knie-Status rot. Beintraining gesperrt. Oberkörper oder Rumpf sind erlaubt. Informieren Sie Ihre Physio.",
+    "Rot. Heute keine Beine, Sir. Das ist keine Verhandlungssache."
   ],
   "locking": [
     "Blockade gemeldet. Kontaktieren Sie umgehend Ihren Operateur, Sir."
@@ -123,5 +119,12 @@
   ],
   "storageWarning": [
     "Speicherschutz nicht bestätigt. Regelmäßige Backups sind Pflicht, Sir."
+  ],
+  "coreLowerAConsecutive": [
+    "Rumpf und Unterkörper A an aufeinanderfolgenden Tagen. Ihr unterer Rücken wird das nicht schätzen, Sir.",
+    "Zwei Rückentage hintereinander. Ich rate davon ab."
+  ],
+  "freeChoicePrompt": [
+    "Welche Bauchübung, Sir?"
   ]
 }

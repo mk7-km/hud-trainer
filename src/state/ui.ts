@@ -16,8 +16,8 @@ interface RestTimer {
 
 export interface TooSoon {
   templateId: string
-  hours: number
-  line: string
+  /** Je verletzter Abstandsregel eine J.A.R.V.I.S.-Zeile und der Regeltext aus dem Plan. */
+  conflicts: { line: string; text: string }[]
 }
 
 interface UiState {

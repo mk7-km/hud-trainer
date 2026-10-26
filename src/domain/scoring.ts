@@ -1,5 +1,5 @@
 import { addDays, mondayOf } from './dates'
-import type { Plan } from './plan'
+import { rulesOf, type Plan, type PlanRules, type RulesArchive } from './plan'
 import { isNeutralWeek } from './schedule'
 import { rightRecords } from './strength'
 import type { CheckLog, DateStr, SessionLog, SessionStatus, SetLog, Settings } from './types'
@@ -34,7 +34,23 @@ export function finishStatus(plan: Plan, done: number, planned: number): Session
     : 'aborted'
 }
 
-const counts = (s: SessionLog) => s.status === 'completed' || s.status === 'suspended_red'
+/** Regeln der Planversion, unter der eine Einheit protokolliert wurde; unbekannte Versionen: aktueller Plan. */
+export function rulesFor(plan: Plan, archive: RulesArchive | undefined, planVersion: string): PlanRules {
+  return archive?.[planVersion] ?? rulesOf(plan)
+}
+
+const counts = (s: SessionLog, rules: PlanRules) =>
+  s.status === 'completed' || (s.status === 'suspended_red' && rules.suspendedCountsAsFulfilled)
+
+/**
+ * Regeln einer Woche: Vergangene Wochen zählen nach der Planversion ihrer zuletzt begonnenen Einheit;
+ * die laufende Woche (und spätere) nach dem aktuellen Plan.
+ */
+function weekRules(plan: Plan, archive: RulesArchive | undefined, monday: DateStr, inWeek: SessionLog[], today?: DateStr): PlanRules {
+  if (today !== undefined && monday >= mondayOf(today)) return rulesOf(plan)
+  const last = inWeek.reduce<SessionLog | null>((a, s) => (!a || s.startedAt > a.startedAt ? s : a), null)
+  return last ? rulesFor(plan, archive, last.planVersion) : rulesOf(plan)
+}
 
 export interface WeekSummary {
   monday: DateStr
@@ -50,13 +66,15 @@ export interface WeekSummary {
   fulfilled: Set<string>
 }
 
-export function weekSummary(plan: Plan, sessions: SessionLog[], monday: DateStr): WeekSummary {
+export function weekSummary(plan: Plan, sessions: SessionLog[], monday: DateStr, archive?: RulesArchive, today?: DateStr): WeekSummary {
   const sunday = addDays(monday, 6)
-  const inWeek = sessions.filter((s) => s.date >= monday && s.date <= sunday && counts(s))
+  const all = sessions.filter((s) => s.date >= monday && s.date <= sunday)
+  const rules = weekRules(plan, archive, monday, all, today)
+  const inWeek = all.filter((s) => counts(s, rulesFor(plan, archive, s.planVersion)))
   const distinct = (type: 'pflicht' | 'bonus') =>
     new Set(inWeek.filter((s) => s.sessionType === type).map((s) => s.sessionTemplateId))
-  const pflichtTarget = plan.schedule.pflichtPerWeek
-  const bonusTarget = plan.schedule.bonusPerWeek
+  const pflichtTarget = rules.pflichtPerWeek
+  const bonusTarget = rules.bonusPerWeek
   const pflicht = distinct('pflicht')
   const bonus = distinct('bonus')
   const pflichtDone = Math.min(pflicht.size, pflichtTarget)
@@ -69,17 +87,17 @@ export function weekSummary(plan: Plan, sessions: SessionLog[], monday: DateStr)
     pflichtTarget,
     bonusTarget,
     full,
-    perfect: full && bonusDone >= bonusTarget,
+    perfect: full && bonusTarget > 0 && bonusDone >= bonusTarget,
     pct: Math.round((pflichtDone / pflichtTarget) * 100),
     fulfilled: new Set([...pflicht, ...bonus]),
   }
 }
 
-/** Punkte einer einzelnen Sitzung ohne Bestwert-Bonus. */
-export function sessionBasePoints(plan: Plan, s: SessionLog): number {
+/** Punkte einer einzelnen Sitzung ohne Bestwert-Bonus, nach den Regeln ihrer Planversion. */
+export function sessionBasePoints(rules: PlanRules, s: SessionLog): number {
   if (s.status !== 'completed') return 0 // ausgesetzte ROT-Einheiten erfüllen das Wochenziel, bringen aber keine Punkte
-  if (s.sessionType === 'pflicht') return plan.points.pflichtSession
-  return s.kneeStatus === 'red' ? plan.points.redReplacementMobility : plan.points.bonusSession
+  if (s.sessionType === 'pflicht') return rules.pflichtSession
+  return s.kneeStatus === 'red' ? rules.redReplacementMobility : rules.bonusSession
 }
 
 export interface PointsResult {
@@ -88,7 +106,7 @@ export interface PointsResult {
   byWeek: Map<DateStr, number>
 }
 
-export function points(plan: Plan, sessions: SessionLog[], sets: SetLog[]): PointsResult {
+export function points(plan: Plan, sessions: SessionLog[], sets: SetLog[], archive?: RulesArchive, today?: DateStr): PointsResult {
   const completed = sessions.filter((s) => s.status === 'completed')
   const records = rightRecords(plan, sets, completed)
   const bySession = new Map<string, { base: number; records: number }>()
@@ -98,9 +116,10 @@ export function points(plan: Plan, sessions: SessionLog[], sets: SetLog[]): Poin
   for (const s of [...sessions].sort((a, b) => a.startedAt - b.startedAt)) {
     // Dieselbe Vorlage zählt pro Woche nur einmal.
     const key = `${mondayOf(s.date)}|${s.sessionTemplateId}`
+    const rules = rulesFor(plan, archive, s.planVersion)
     const repeat = seenPerWeek.has(key)
-    if (counts(s)) seenPerWeek.add(key)
-    const base = repeat ? 0 : sessionBasePoints(plan, s)
+    if (counts(s, rules)) seenPerWeek.add(key)
+    const base = repeat ? 0 : sessionBasePoints(rules, s)
     const rec = (records.get(s.id)?.length ?? 0) * plan.points.newRightLegRecord
     bySession.set(s.id, { base, records: rec })
     total += base + rec
@@ -108,8 +127,9 @@ export function points(plan: Plan, sessions: SessionLog[], sets: SetLog[]): Poin
 
   const byWeek = new Map<DateStr, number>()
   for (const monday of new Set(sessions.map((s) => mondayOf(s.date)))) {
-    const w = weekSummary(plan, sessions, monday)
-    const bonus = (w.full ? plan.points.weekAllPflicht : 0) + (w.perfect ? plan.points.perfectWeekExtra : 0)
+    const w = weekSummary(plan, sessions, monday, archive, today)
+    const rules = weekRules(plan, archive, monday, sessions.filter((s) => mondayOf(s.date) === monday), today)
+    const bonus = (w.full ? rules.weekAllPflicht : 0) + (w.perfect ? rules.perfectWeekExtra : 0)
     if (bonus > 0) byWeek.set(monday, bonus)
     total += bonus
   }
@@ -131,6 +151,7 @@ export function streaks(
   sessions: SessionLog[],
   settings: StreakSettings,
   today: DateStr,
+  archive?: RulesArchive,
 ): StreakResult {
   const result: StreakResult = { current: 0, best: 0, fullWeeksTotal: 0, weeks: [] }
   if (!settings.programStart) return result
@@ -138,7 +159,7 @@ export function streaks(
 
   for (let monday = mondayOf(settings.programStart); monday <= thisMonday; monday = addDays(monday, 7)) {
     if (isNeutralWeek(plan, settings, monday)) continue
-    const summary = weekSummary(plan, sessions, monday)
+    const summary = weekSummary(plan, sessions, monday, archive, today)
     const running = monday === thisMonday
     // Die laufende Woche kann eine Serie verlängern, aber erst nach Sonntag 23:59 beenden.
     if (running && !summary.full) continue
@@ -156,5 +177,5 @@ export function streaks(
 
 /** Tage seit der letzten abgeschlossenen Einheit; null, wenn es noch keine gibt. */
 export function lastCompletedDate(sessions: SessionLog[]): DateStr | null {
-  return sessions.filter(counts).reduce<DateStr | null>((d, s) => (d === null || s.date > d ? s.date : d), null)
+  return sessions.filter((s) => s.status === 'completed' || s.status === 'suspended_red').reduce<DateStr | null>((d, s) => (d === null || s.date > d ? s.date : d), null)
 }

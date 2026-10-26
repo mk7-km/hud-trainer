@@ -1,5 +1,5 @@
-import { parsePlan, type Plan } from '../domain/plan'
-import { db, type TrainerDb } from './db'
+import { parsePlan, rulesOf, type Plan, type RulesArchive } from '../domain/plan'
+import { db, RULES_PREFIX, type TrainerDb } from './db'
 
 export interface LoadedPlan {
   plan: Plan | null
@@ -17,18 +17,36 @@ const defaultFetcher: Fetcher = async () => {
   return res.json()
 }
 
+/** Regeln einer Planversion archivieren, damit alte Wochen nach den damals gültigen Regeln zählen. */
+export async function archiveRules(plan: Plan, database: TrainerDb = db): Promise<void> {
+  await database.planCache.put({
+    id: RULES_PREFIX + plan.planVersion,
+    planVersion: plan.planVersion,
+    raw: plan,
+    storedAt: Date.now(),
+    rules: rulesOf(plan),
+  })
+}
+
+export async function loadRulesArchive(database: TrainerDb = db): Promise<RulesArchive> {
+  const rows = await database.planCache.where('id').startsWith(RULES_PREFIX).toArray()
+  return Object.fromEntries(rows.filter((r) => r.rules).map((r) => [r.planVersion, r.rules!]))
+}
+
 /** Network-first (der Service Worker liefert offline seine Kopie); ungültige Pläne ersetzen nie den letzten gültigen. */
 export async function loadPlan(fetcher: Fetcher = defaultFetcher, database: TrainerDb = db): Promise<LoadedPlan> {
   let error: string
   try {
     const result = parsePlan(await fetcher())
     if (result.ok) {
-      await database.planCache.put({
-        id: 'lastValid',
-        planVersion: result.plan.planVersion,
-        raw: result.plan,
-        storedAt: Date.now(),
-      })
+      // Vorgängerversion sichern, falls sie noch nicht im Archiv steht (Geräte, die vor dem Archiv liefen).
+      const previous = await database.planCache.get('lastValid')
+      if (previous && previous.planVersion !== result.plan.planVersion) {
+        const old = parsePlan(previous.raw)
+        if (old.ok && !(await database.planCache.get(RULES_PREFIX + old.plan.planVersion))) await archiveRules(old.plan, database)
+      }
+      await database.planCache.put({ id: 'lastValid', planVersion: result.plan.planVersion, raw: result.plan, storedAt: Date.now() })
+      await archiveRules(result.plan, database)
       return { plan: result.plan, source: 'network', error: null }
     }
     error = `Der neue Trainingsplan ist ungültig und wurde nicht übernommen. ${result.errors.slice(0, 3).join(' · ')}`

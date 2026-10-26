@@ -36,9 +36,10 @@ test.describe('Offline', () => {
     await page.reload()
     await expect(page.getByRole('img', { name: /2 von 4 Pflichteinheiten/ })).toBeVisible()
     await page.getByRole('button', { name: 'SYSTEM' }).click()
-    await expect(page.getByText(/^1\.0\.0 · /)).toBeVisible()
+    await expect(page.getByText(/^1\.1\.0 · /)).toBeVisible()
+    await expect(page.getByText('Änderungen noch nicht von der Physio gesehen')).toBeVisible()
 
-    // Bonuseinheit starten und einen Eintrag speichern
+    // Empfohlene Einheit (Unterkörper B) starten und einen Satz speichern
     await page.getByRole('button', { name: 'HOME' }).click()
     await page.getByRole('button', { name: 'Mission starten' }).click()
     await page.getByRole('radio', { name: 'keine' }).click()
@@ -48,15 +49,16 @@ test.describe('Offline', () => {
     }
     await page.getByRole('button', { name: 'Knie-Check abschließen' }).click()
     await page.getByRole('button', { name: 'Weiter' }).click()
-    await expect(page.getByRole('heading', { name: 'Rad locker (Zone 2)' })).toBeVisible()
+    await page.getByRole('button', { name: 'Aufwärmen erledigt' }).click()
+    await expect(page.getByRole('heading', { name: 'Jump beidbeinig mit Band' })).toBeVisible()
     await page.getByRole('button', { name: 'Satz speichern' }).click()
-    await expect(page.getByText('30 min')).toBeVisible()
+    await expect(page.getByText('6 Wdh')).toBeVisible()
 
     // Neustart ohne Netz: Eintrag ist noch da
     await page.reload()
     await page.getByRole('button', { name: 'Mission fortsetzen' }).click()
     await page.getByRole('button', { name: 'Zur Übersicht' }).click()
-    await expect(page.getByRole('button', { name: /Rad locker \(Zone 2\).*1\/1/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Jump beidbeinig mit Band.*1\/3/ })).toBeVisible()
   })
 })
 
@@ -70,38 +72,40 @@ test.describe('Planwechsel', () => {
     await page.goto('./')
     await importSeed(page)
 
-    // Phase-2-artiger Plan: neue Version, Übung umbenannt, eine Einheit gestrichen, Satzzahl geändert
+    // Phase-2-artiger Plan: neue Version, Übung umbenannt, eine Einheit gestrichen, Wochenziel angepasst
     const next = rawPlan()
-    next.planVersion = '1.1.0'
+    next.planVersion = '1.2.0'
     next.exercises.legpress_single.name = 'Beinpresse einbeinig (neu benannt)'
     next.exercises.bench_press.sets = 5
-    next.sessions = next.sessions.filter((s: { id: string }) => s.id !== 'bonus_swim_bike')
-    next.schedule.bonusPerWeek = 1
+    next.sessions = next.sessions.filter((s: { id: string }) => s.id !== 'core')
+    next.schedule.recommendedOrder = ['lower_a', 'upper', 'lower_b']
+    next.schedule.spacingRules = next.schedule.spacingRules.filter((r: { id: string }) => r.id !== 'core_lower_a')
+    next.schedule.pflichtPerWeek = 3
     await page.route('**/plan.json', (route) => route.fulfill({ json: next }))
     await page.reload()
 
-    await expect(page.getByText('Neuer Trainingsplan geladen: Version 1.1.0.')).toBeVisible()
+    await expect(page.getByText('Neuer Trainingsplan geladen: Version 1.2.0.')).toBeVisible()
     await page.screenshot({ path: 'e2e/screenshots/m6-plan-updated.png' })
     await page.getByRole('button', { name: 'Schließen' }).click()
-    await expect(page.getByRole('img', { name: /0 von 1 Bonuseinheiten/ })).toBeVisible()
+    await expect(page.getByRole('img', { name: /^Wochenenergie: 2 von 3 Pflichteinheiten$/ })).toBeVisible()
 
     // Alte Logs: Schnappschuss des alten Namens im Übungsverlauf, alte Einheit im Wochenverlauf
     await page.getByRole('button', { name: 'STATUS' }).click()
     await expect(page.getByRole('combobox')).toContainText('Beinpresse einbeinig')
     await page.getByRole('button', { name: 'WOCHE' }).click()
     await page.getByText(/Woche 7 · /).click()
-    await expect(page.getByRole('button', { name: /Schwimmen oder Rad.*öffnen/ }).first()).toBeVisible()
-    await page.getByRole('button', { name: /Schwimmen oder Rad.*öffnen/ }).first().click()
+    await expect(page.getByRole('button', { name: /Rumpf vom.*öffnen/ }).first()).toBeVisible()
+    await page.getByRole('button', { name: /Rumpf vom.*öffnen/ }).first().click()
     await expect(page.getByText('Diese Einheit gibt es im aktuellen Trainingsplan nicht mehr.')).toBeVisible()
     await page.getByRole('button', { name: 'Schließen' }).click()
 
-    // Kaputter Plan: wird abgelehnt, 1.1.0 bleibt aktiv, SYSTEM meldet es
+    // Kaputter Plan: wird abgelehnt, 1.2.0 bleibt aktiv, SYSTEM meldet es
     await page.unroute('**/plan.json')
     await page.route('**/plan.json', (route) => route.fulfill({ json: { ...next, planVersion: '9.9.9', sessions: [] } }))
     await page.reload()
     await page.getByRole('button', { name: 'SYSTEM' }).click()
     await expect(page.getByText(/ungültig und wurde nicht übernommen/)).toBeVisible()
-    await expect(page.getByText(/^1\.1\.0 · /)).toBeVisible()
+    await expect(page.getByText(/^1\.2\.0 · /)).toBeVisible()
     await page.screenshot({ path: 'e2e/screenshots/m6-plan-invalid.png' })
   })
 })

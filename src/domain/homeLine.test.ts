@@ -8,7 +8,7 @@ import { loadTestPlan } from './testplan.node'
 import type { BodyweightLog, SessionLog } from './types'
 
 const plan = loadTestPlan()
-const PFLICHT = ['lower_a', 'upper_a', 'lower_b', 'upper_b']
+const PFLICHT = ['lower_a', 'upper', 'lower_b', 'core']
 const START = '2026-09-21'
 
 function input(today: string, sessions: SessionLog[], extra: Partial<HomeInput['settings']> & { opDate?: string | null; bodyweight?: BodyweightLog[] } = {}): HomeInput {
@@ -96,12 +96,7 @@ describe('Zeile nach Abschluss', () => {
     expect(completionLine(plan, week, week[3]!, 2, null, pct)).toEqual({ key: 'weekComplete', vars: { weeks: 2 } })
     expect(completionLine(plan, week.slice(0, 3), week[2]!, 0, null, pct).key).toBe('missionComplete')
   })
-  it('sechste Einheit macht die Woche perfekt; Bestwert und Abbruch', () => {
-    const bonus = ['bonus_bike_mobility', 'bonus_swim_bike'].map((id, i) =>
-      makeSession({ date: i ? '2026-10-03' : '2026-09-30', sessionTemplateId: id, sessionType: 'bonus', focus: 'cardio' }),
-    )
-    const all = [...fullWeek('2026-09-28', PFLICHT), ...bonus]
-    expect(completionLine(plan, all, bonus[1]!, 1, null, pct).key).toBe('perfectWeek')
+  it('Bestwert und Abbruch', () => {
     const one = [makeSession({ date: '2026-09-28' })]
     expect(completionLine(plan, one, one[0]!, 0, { exercise: 'Beinpresse einbeinig', kg: 84 }, pct).key).toBe('newRecordRight')
     const aborted = makeSession({ date: '2026-09-28', status: 'aborted' })

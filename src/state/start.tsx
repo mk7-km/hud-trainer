@@ -1,42 +1,50 @@
 import { say } from '../content/jarvis'
+import { formatDateDe } from '../domain/dates'
 import type { Plan, PlanSession } from '../domain/plan'
-import type { SessionLog } from '../domain/types'
+import { conflictLineKey, spacingConflicts, type SpacingConflict } from '../domain/spacing'
 import { Button, Dialog } from '../ui/controls'
 import { useApp } from './store'
 import { useUi } from './ui'
 
-/** Stunden seit der letzten Unterkörper-Einheit, falls unter der Vorgabe des Plans. */
-export function lowerTooSoonHours(plan: Plan, sessions: SessionLog[], now: number): number | null {
-  const last = lastLowerEnd(sessions)
-  if (last === null) return null
-  const hours = (now - last) / 3_600_000
-  return hours < plan.schedule.minHoursBetweenLowerSessions ? Math.floor(hours) : null
+/** Verstöße gegen die Abstandsregeln, wenn `templateId` jetzt gestartet würde. */
+export function conflictsFor(plan: Plan, templateId: string): SpacingConflict[] {
+  const { sessions, today } = useApp.getState()
+  return spacingConflicts(plan, sessions, templateId, Date.now(), today)
 }
 
-export function lastLowerEnd(sessions: SessionLog[]): number | null {
-  return sessions
-    .filter((x) => x.focus === 'lower' && x.status === 'completed')
-    .reduce<number | null>((t, x) => Math.max(t ?? 0, x.endedAt ?? x.startedAt), null)
+/** Kurztext für Listen: ab wann bzw. warum eine Einheit warten sollte. */
+export function conflictHint(c: SpacingConflict): string {
+  if (c.kind === 'minHours' && c.freeAt !== undefined) {
+    const at = new Date(c.freeAt)
+    return `frühestens ${at.toLocaleDateString('de-AT', { weekday: 'short' })} ${at.toLocaleTimeString('de-AT', { hour: '2-digit', minute: '2-digit' })}`
+  }
+  return `nicht direkt nach ${c.otherName} (${formatDateDe(c.otherDate ?? '').slice(0, 6)})`
 }
 
-/** Einheit starten; bei zu kurzem Abstand zur letzten Beineinheit erst nach Bestätigung. */
+/** Einheit starten; bei verletzter Abstandsregel erst nach Bestätigung. */
 export function requestStart(plan: Plan, template: PlanSession) {
-  const hours = template.focus === 'lower' ? lowerTooSoonHours(plan, useApp.getState().sessions, Date.now()) : null
-  if (hours !== null) {
-    useUi.getState().setTooSoon({ templateId: template.id, hours, line: say('lowerTooSoon', { hours }) })
+  const conflicts = conflictsFor(plan, template.id)
+  if (conflicts.length) {
+    useUi.getState().setTooSoon({
+      templateId: template.id,
+      conflicts: conflicts.map((c) => ({
+        line: say(conflictLineKey(c), { hours: c.hours ?? 0 }),
+        text: c.rule.text ?? '',
+      })),
+    })
   } else {
     useUi.getState().openMission({ kind: 'start', templateId: template.id })
   }
 }
 
-export function TooSoonDialog({ plan }: { plan: Plan }) {
+export function TooSoonDialog() {
   const tooSoon = useUi((u) => u.tooSoon)
   const setTooSoon = useUi((u) => u.setTooSoon)
   const openMission = useUi((u) => u.openMission)
   if (!tooSoon) return null
   return (
     <Dialog
-      title="Zu früh für die Beine"
+      title="Abstandsregel"
       actions={
         <>
           <Button variant="primary" onClick={() => setTooSoon(null)}>
@@ -48,11 +56,12 @@ export function TooSoonDialog({ plan }: { plan: Plan }) {
         </>
       }
     >
-      <p>{tooSoon.line}</p>
-      <p>
-        Zwischen zwei Unterkörper-Einheiten sollen {plan.schedule.minHoursBetweenLowerSessions} Stunden liegen. Seit der
-        letzten sind es {tooSoon.hours}.
-      </p>
+      {tooSoon.conflicts.map((c, i) => (
+        <div key={i}>
+          <p>„{c.line}“</p>
+          {c.text && <p>{c.text}</p>}
+        </div>
+      ))}
     </Dialog>
   )
 }

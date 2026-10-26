@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import { db, getSettings, patchSettings } from '../db/db'
-import { loadPlan } from '../db/planLoader'
+import { loadPlan, loadRulesArchive } from '../db/planLoader'
 import { localDate } from '../domain/dates'
-import type { Plan } from '../domain/plan'
+import type { Plan, RulesArchive } from '../domain/plan'
 import {
   DEFAULT_SETTINGS,
   type BodyweightLog,
@@ -32,6 +32,8 @@ interface AppState extends UserData {
   planError: string | null
   /** Eine neue planVersion wurde geladen (Hinweis planUpdated). */
   planUpdatedTo: string | null
+  /** Regeln früherer Planversionen (Punkte, Wochenziel) für die Bewertung alter Wochen. */
+  planArchive: RulesArchive
   settings: Settings
   today: DateStr
   init(): Promise<void>
@@ -62,6 +64,7 @@ export const useApp = create<AppState>((set, get) => ({
   plan: null,
   planError: null,
   planUpdatedTo: null,
+  planArchive: {},
   settings: DEFAULT_SETTINGS,
   today: localDate(Date.now(), FALLBACK_TZ),
   sessions: [],
@@ -74,6 +77,7 @@ export const useApp = create<AppState>((set, get) => ({
 
   async init() {
     const [loaded, settings, data] = await Promise.all([loadPlan(), getSettings(), readUserData()])
+    const planArchive = await loadRulesArchive()
     const plan = loaded.plan
     let planUpdatedTo: string | null = null
     if (plan && settings.lastSeenPlanVersion !== plan.planVersion) {
@@ -86,6 +90,7 @@ export const useApp = create<AppState>((set, get) => ({
       plan,
       planError: loaded.error,
       planUpdatedTo,
+      planArchive,
       settings,
       today: localDate(Date.now(), plan?.schedule.timezone ?? FALLBACK_TZ),
       ready: true,
@@ -93,8 +98,8 @@ export const useApp = create<AppState>((set, get) => ({
   },
 
   async reload() {
-    const [settings, data] = await Promise.all([getSettings(), readUserData()])
-    set({ ...data, settings })
+    const [settings, data, planArchive] = await Promise.all([getSettings(), readUserData(), loadRulesArchive()])
+    set({ ...data, settings, planArchive })
   },
 
   async updateSettings(patch) {

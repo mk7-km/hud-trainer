@@ -169,9 +169,10 @@ export function Mission({ plan, target }: { plan: Plan; target: MissionTarget })
       plan,
       st.sessions,
       finished,
-      streaks(plan, st.sessions, st.settings, st.today).current,
+      streaks(plan, st.sessions, st.settings, st.today, st.planArchive).current,
       record ? { exercise: plan.exercises[record.exerciseId]?.name ?? record.exerciseId, kg: Math.round(record.e1rm) } : null,
       Math.round(ratio * 100),
+      st.planArchive,
     )
     const endLine = say(choice.key, choice.vars)
     setLine(endLine)

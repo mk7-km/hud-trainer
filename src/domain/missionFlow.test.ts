@@ -10,8 +10,9 @@ const ctx = { weekType: 'normal', taper: false, block: 1 } as const
 
 describe('Reihenfolge der Sätze', () => {
   it('wechselt die Seiten, rechts beginnt, auch bei ungleicher Satzzahl', () => {
-    const iso = resolveSession(plan, 'upper_a', ctx, 'green').items.find((i) => i.exerciseId === 'knee_iso_legext')!
-    expect(slotsOf(iso).map((s) => `${s.side}${s.setIndex + 1}`)).toEqual(['R1', 'L1', 'R2', 'L2', 'R3', 'R4'])
+    const base = resolveSession(plan, 'lower_a', ctx, 'green').items.find((i) => i.exerciseId === 'legpress_single')!
+    const uneven = { ...base, sides: [{ side: 'R' as const, sets: 4 }, { side: 'L' as const, sets: 2 }] }
+    expect(slotsOf(uneven).map((s) => `${s.side}${s.setIndex + 1}`)).toEqual(['R1', 'L1', 'R2', 'L2', 'R3', 'R4'])
   })
 
   it('findet den nächsten offenen Satz', () => {
@@ -23,10 +24,10 @@ describe('Reihenfolge der Sätze', () => {
 })
 
 describe('Supersätze', () => {
-  const items = resolveSession(plan, 'upper_a', ctx, 'green').items
+  const items = resolveSession(plan, 'upper', ctx, 'green').items
   const curl = items.findIndex((i) => i.exerciseId === 'ez_curl')
   const push = items.findIndex((i) => i.exerciseId === 'triceps_pushdown')
-  const session = makeSession({ date: '2026-09-29', sessionTemplateId: 'upper_a' })
+  const session = makeSession({ date: '2026-09-29', sessionTemplateId: 'upper' })
   const open = (sets: SetLog[]) => (i: number) => nextOpenSlot(items[i]!, sets) !== null
 
   it('erkennt die Gruppe', () => {

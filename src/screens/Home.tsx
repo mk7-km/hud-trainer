@@ -5,7 +5,7 @@ import type { Plan } from '../domain/plan'
 import type { DayContext } from '../domain/schedule'
 import type { Derived } from '../state/derived'
 import { finishSession } from '../state/mission'
-import { requestStart } from '../state/start'
+import { conflictsFor, requestStart } from '../state/start'
 import { useApp } from '../state/store'
 import { useUi } from '../state/ui'
 import { Button, Dialog, JarvisLine, Panel, Seg } from '../ui/controls'
@@ -63,8 +63,12 @@ export function Home({ plan, derived, draw }: { plan: Plan; derived: Derived; dr
   const line = useLine(choice.key, choice.vars)
 
   const active = sessions.find((x) => x.status === 'active') ?? null
-  const ordered = [...plan.sessions].sort((a, b) => a.order - b.order)
-  const recommended = ordered.find((t) => !week.fulfilled.has(t.id)) ?? null
+  // Empfehlung: nächste offene Einheit nach recommendedOrder (sonst order); eine mit Abstandskonflikt wird nachgereiht.
+  const byId = new Map(plan.sessions.map((t) => [t.id, t]))
+  const orderIds = plan.schedule.recommendedOrder ?? [...plan.sessions].sort((a, b) => a.order - b.order).map((t) => t.id)
+  const ordered = orderIds.map((id) => byId.get(id)).filter((t): t is NonNullable<typeof t> => t !== undefined)
+  const open = ordered.filter((t) => !week.fulfilled.has(t.id))
+  const recommended = open.find((t) => conflictsFor(plan, t.id).length === 0) ?? open[0] ?? null
   const lastKnee = kneeChecks.reduce<(typeof kneeChecks)[number] | null>((a, b) => (!a || b.at > a.at ? b : a), null)
   const mark = plan.marks.find((x) => x.level === derived.reachedLevel)
   const backupDays = settings.lastBackupAt === null ? null : Math.floor((Date.now() - settings.lastBackupAt) / 86_400_000)

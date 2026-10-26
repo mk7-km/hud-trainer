@@ -64,7 +64,7 @@ export async function beginSession(
 /** Geplante Einheit aus den in der Sitzung gespeicherten Rahmendaten wiederherstellen. */
 export function resolveFor(plan: Plan, session: SessionLog): ResolvedSession | null {
   try {
-    return resolveSession(plan, session.sessionTemplateId, session, session.kneeStatus, session.choices)
+    return resolveSession(plan, session.sessionTemplateId, session, session.kneeStatus, session.choices, session.freeNames ?? {})
   } catch {
     return null // Vorlage existiert im aktuellen Plan nicht mehr
   }
@@ -77,8 +77,24 @@ async function patchSession(id: string, patch: Partial<SessionLog>) {
 
 export async function chooseExercise(plan: Plan, session: SessionLog, itemIndex: number, exerciseId: string) {
   const choices = { ...session.choices, [String(itemIndex)]: exerciseId }
-  const plannedUnits = resolveSession(plan, session.sessionTemplateId, session, session.kneeStatus, choices).plannedUnits
+  const plannedUnits = resolveSession(plan, session.sessionTemplateId, session, session.kneeStatus, choices, session.freeNames ?? {}).plannedUnits
   await patchSession(session.id, { choices, plannedUnits })
+}
+
+/** Freie Übungswahl: Name für ein Item festlegen. Verlauf und Bestwerte laufen danach unter diesem Namen. */
+export async function setFreeName(session: SessionLog, itemIndex: number, name: string) {
+  const freeNames = { ...(session.freeNames ?? {}), [String(itemIndex)]: name.trim() }
+  await patchSession(session.id, { freeNames })
+}
+
+/** Früher eingegebene Namen einer frei wählbaren Übung, zuletzt genutzte zuerst. */
+export function freeNameSuggestions(sets: SetLog[], exerciseId: string): string[] {
+  const last = new Map<string, number>()
+  for (const s of sets) {
+    if (s.exerciseId !== exerciseId || !s.variantId) continue
+    last.set(s.variantId, Math.max(last.get(s.variantId) ?? 0, s.loggedAt))
+  }
+  return [...last.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name)
 }
 
 export interface SetInput {

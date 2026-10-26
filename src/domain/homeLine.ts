@@ -1,6 +1,6 @@
 import { addDays, diffDays, mondayOf, weekdayIndex } from './dates'
 import { losingTooFast, weighInsThisWeek } from './bodyweight'
-import type { Plan } from './plan'
+import type { Plan, RulesArchive } from './plan'
 import { lastCompletedDate, weekSummary, type StreakResult, type WeekSummary } from './scoring'
 import type { DayContext } from './schedule'
 import type { BodyweightLog, DateStr, SessionLog, Settings } from './types'
@@ -62,7 +62,6 @@ export type LineKey =
   | 'inactivity'
   | 'weekFailed'
   | 'weekComplete'
-  | 'perfectWeek'
   | 'taper'
   | 'calibrationWeek'
   | 'deloadWeek'
@@ -96,7 +95,6 @@ export function homeLine(i: HomeInput): LineChoice {
   const last = i.streak.weeks[i.streak.weeks.length - 1]
   if (last && last.monday === addDays(mondayOf(i.today), -7) && weekdayIndex(i.today) <= 1 && week.pflichtDone === 0) {
     const s = last.summary
-    if (s.perfect) return { key: 'perfectWeek', vars: {} }
     if (s.full) return { key: 'weekComplete', vars: { weeks: i.streak.current } }
     return { key: 'weekFailed', vars: { done: s.pflichtDone, pct: s.pct } }
   }
@@ -125,12 +123,12 @@ export function completionLine(
   streakCurrent: number,
   record: { exercise: string; kg: number } | null,
   pct: number,
+  archive?: RulesArchive,
 ): LineChoice | { key: 'newRecordRight' | 'missionComplete' | 'sessionAborted'; vars: Record<string, string | number> } {
   if (session.status !== 'completed') return { key: 'sessionAborted', vars: {} }
   const monday = mondayOf(session.date)
-  const after = weekSummary(plan, sessionsAfter, monday)
-  const before = weekSummary(plan, sessionsAfter.filter((s) => s.id !== session.id), monday)
-  if (after.perfect && !before.perfect) return { key: 'perfectWeek', vars: {} }
+  const after = weekSummary(plan, sessionsAfter, monday, archive, session.date)
+  const before = weekSummary(plan, sessionsAfter.filter((s) => s.id !== session.id), monday, archive, session.date)
   if (after.full && !before.full) return { key: 'weekComplete', vars: { weeks: streakCurrent } }
   if (record) return { key: 'newRecordRight', vars: record }
   return { key: 'missionComplete', vars: { pct } }

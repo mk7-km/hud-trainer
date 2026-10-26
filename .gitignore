@@ -11,3 +11,7 @@ e2e/screenshots/
 # Privater Auftragstext und lokale Werkzeug-Einstellungen: gehören nicht ins öffentliche Repo
 PROMPT.md
 .claude/
+
+# Änderungsaufträge enthalten persönliche Angaben
+AENDERUNG_*.md
+plan_v*.json

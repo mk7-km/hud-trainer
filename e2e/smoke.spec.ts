@@ -93,10 +93,12 @@ test('Onboarding, komplette Mission, Fortsetzen, Backup – ohne fremde Anfragen
   await page.getByRole('button', { name: 'Fertig' }).click()
   await expect(page.getByRole('img', { name: /1 von 4 Pflichteinheiten/ })).toBeVisible()
 
-  // Zweite Beineinheit am selben Tag: 48-Stunden-Warnung
+  // Zweite Beineinheit am selben Tag: Abstandsregel (48 Stunden) verlangt Bestätigung
   await page.getByRole('button', { name: 'WOCHE' }).click()
+  await expect(page.getByRole('button', { name: /Unterkörper B.*starten/ })).toContainText('frühestens')
   await page.getByRole('button', { name: /Unterkörper B.*starten/ }).click()
-  await expect(page.getByRole('alertdialog', { name: 'Zu früh für die Beine' })).toBeVisible()
+  await expect(page.getByRole('alertdialog', { name: 'Abstandsregel' })).toBeVisible()
+  await expect(page.getByText(/mindestens 48 Stunden/)).toBeVisible()
   await shot(page, 'm2-too-soon')
   await page.getByRole('button', { name: 'Andere Einheit wählen' }).click()
 

@@ -4,7 +4,7 @@ import { weekSummary } from '../domain/scoring'
 import { programWeekOf, weekEntry } from '../domain/schedule'
 import type { SessionLog } from '../domain/types'
 import type { Derived } from '../state/derived'
-import { lastLowerEnd, requestStart } from '../state/start'
+import { conflictHint, conflictsFor, requestStart } from '../state/start'
 import { useApp } from '../state/store'
 import { useUi } from '../state/ui'
 import { Panel } from '../ui/controls'
@@ -59,10 +59,6 @@ export function Week({ plan, derived }: { plan: Plan; derived: Derived }) {
   const thisWeek = sessions.filter((x) => x.date >= monday && x.date <= addDays(monday, 6))
   const ordered = [...plan.sessions].sort((a, b) => a.order - b.order)
 
-  const lowerEnd = lastLowerEnd(sessions)
-  const lowerFreeAt = lowerEnd === null ? null : lowerEnd + plan.schedule.minHoursBetweenLowerSessions * 3_600_000
-  const lowerBlocked = lowerFreeAt !== null && lowerFreeAt > Date.now()
-
   const pastMondays = [...new Set(sessions.map((x) => mondayOf(x.date)))].filter((d) => d < monday).sort().reverse()
 
   return (
@@ -81,21 +77,13 @@ export function Week({ plan, derived }: { plan: Plan; derived: Derived }) {
         {short(monday)} bis {short(addDays(monday, 6))} · Abschluss Sonntag 23:59
       </p>
 
-      {lowerBlocked && (
-        <Panel tone="warn" title="48-Stunden-Regel">
-          <p className={s.text}>
-            Nächste Unterkörper-Einheit frühestens{' '}
-            {new Date(lowerFreeAt).toLocaleString('de-AT', { weekday: 'long', hour: '2-digit', minute: '2-digit' })} Uhr.
-          </p>
-        </Panel>
-      )}
-
       <Panel title="Einheiten">
         <ul className={s.list}>
           {ordered.map((t) => {
             const logs = thisWeek.filter((x) => x.sessionTemplateId === t.id).sort((a, b) => b.startedAt - a.startedAt)
             const counted = logs.find((x) => x.status === 'completed' || x.status === 'suspended_red' || x.status === 'active')
             if (counted) return <SessionRow key={t.id} session={counted} />
+            const conflicts = conflictsFor(plan, t.id)
             return (
               <li key={t.id}>
                 <button
@@ -112,8 +100,15 @@ export function Week({ plan, derived }: { plan: Plan; derived: Derived }) {
                       {t.durationMin ? ` · ca. ${t.durationMin} min` : ''}
                       {logs.length > 0 ? ' · zuletzt abgebrochen' : ''}
                     </span>
+                    {conflicts.map((c) => (
+                      <span key={c.rule.id} className={s.listSub} style={{ color: 'var(--amber)' }}>
+                        {conflictHint(c)}
+                      </span>
+                    ))}
                   </span>
-                  <span className={s.tag}>offen</span>
+                  <span className={s.tag} data-state={conflicts.length ? 'warn' : undefined}>
+                    {conflicts.length ? 'Abstand' : 'offen'}
+                  </span>
                 </button>
               </li>
             )
@@ -126,7 +121,7 @@ export function Week({ plan, derived }: { plan: Plan; derived: Derived }) {
           <p className={s.muted}>Noch keine frühere Woche. Der Verlauf beginnt mit dem ersten Wochenabschluss.</p>
         ) : (
           pastMondays.map((m) => {
-            const sum = weekSummary(plan, sessions, m)
+            const sum = weekSummary(plan, sessions, m, derived.planArchive)
             const no = programStart ? programWeekOf(programStart, m) : 0
             const bonusPts = derived.points.byWeek.get(m) ?? 0
             const logs = sessions.filter((x) => x.date >= m && x.date <= addDays(m, 6)).sort((a, b) => a.startedAt - b.startedAt)

@@ -17,8 +17,8 @@ Der Nutzer ist kein Entwickler. Nie darum bitten, Code zu bearbeiten. Schritte m
 
 - `public/plan.json` – Trainingsplan, zur Laufzeit network-first geladen (Workbox `NetworkFirst`), mit zod validiert.
 - `src/content/jarvis.de.json` – alle J.A.R.V.I.S.-Texte; J.A.R.V.I.S. spricht nur mit diesen Zeilen.
-- `src/domain/` – UI-freie Fachlogik (Kalender, Wochentyp, Ampel, Satzregeln, Progression, e1RM/Symmetrie, Punkte, Serien, Marks, Körpergewicht). Reine Funktionen, vollständig mit Vitest getestet.
-- `src/db/` – Dexie-Schema (`db.ts`), Backup-Export/Import mit Migrationen (`backup.ts`), Plan-Lader mit letzter gültiger Version in IndexedDB (`planLoader.ts`).
+- `src/domain/` – UI-freie Fachlogik (Kalender, Wochentyp, Ampel, Satzregeln, Abstandsregeln `spacing.ts`, Progression, e1RM/Symmetrie, Punkte, Serien, Marks, Körpergewicht). Reine Funktionen, vollständig mit Vitest getestet. `plan.ts` liefert mit `rulesOf()` die Punkte-/Wochenregeln einer Planversion; `scoring.ts` bewertet alte Wochen über ein Regel-Archiv (`RulesArchive`), die laufende Woche nach dem aktuellen Plan.
+- `src/db/` – Dexie-Schema (`db.ts`), Backup-Export/Import mit Migrationen (`backup.ts`, enthält auch das Regel-Archiv `planRules`), Plan-Lader mit letzter gültiger Version und Regel-Archiv je Planversion in IndexedDB (`planLoader.ts`).
 - `src/state/` – Zustand-Stores: `store.ts` (Plan, Einstellungen, alle Logs im Speicher), `ui.ts` (Tab, laufende Mission, Pausentimer), `derived.ts` (alle abgeleiteten Werte als reine Funktionen über Logs + Plan), `mission.ts`/`body.ts`/`marks.ts`/`start.tsx` (Schreibvorgänge: erst Datenbank, dann Store).
 - `src/platform/` – Browser-APIs: Standalone-Erkennung, Offline-Status, Wake Lock, Web Audio (`audio.ts`), Stimme (`voice.ts`, iOS-Eigenheiten dort kommentiert), Teilen/Speicherschutz (`share.ts`).
 - `src/screens/` – Onboarding, Boot, Home, Week, Status, System, Overlays (OP-Frage, Mark-Aufstieg), `mission/` (Knie-Check, Work, RestBar, Stopwatch, Summary).
@@ -43,6 +43,8 @@ Unter Windows ist nach frischer Installation evtl. `C:\Program Files\nodejs` noc
 ## Planänderungen
 
 > Neuer Plan: `public/plan.json` durch die gelieferte Datei ersetzen, Schema-Validierung und Tests laufen lassen, committen, pushen. Das Deployment läuft automatisch. Am iPhone App öffnen, Hinweis „Neuer Trainingsplan geladen“ abwarten.
+
+Vorher prüfen: Prosa-Felder des Plans (`approval.note`, `legend`, `hint`) dürfen keinen Klarnamen enthalten (Repo ist öffentlich); nur solche Texte anpassen, nie Übungen, Sätze oder Schwellen. Neue Plan-Konzepte brauchen Schema (`src/domain/plan.ts`), Engine, Tests und einen Eintrag in `DECISIONS.md`. Änderungsaufträge (`AENDERUNG_*.md`) und Archivpläne (`plan_v*.json`) bleiben über `.gitignore` außerhalb des Repos.
 
 ## Änderungen am Datenformat
 

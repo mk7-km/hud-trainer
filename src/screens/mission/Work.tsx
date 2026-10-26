@@ -5,10 +5,11 @@ import { recommend, type Recommendation } from '../../domain/progression'
 import { historyKey, type ResolvedItem, type ResolvedSession } from '../../domain/sessionPlan'
 import type { SessionLog, SetLog, SkipReason } from '../../domain/types'
 import { playCue } from '../../platform/audio'
-import { deleteSet, saveSet, setCheck, skipExercise, type SetInput } from '../../state/mission'
+import { deleteSet, freeNameSuggestions, saveSet, setFreeName, setCheck, skipExercise, type SetInput } from '../../state/mission'
 import { useApp } from '../../state/store'
 import { useUi } from '../../state/ui'
-import { Button, Dialog, Seg, Stepper } from '../../ui/controls'
+import { say } from '../../content/jarvis'
+import { Button, Dialog, JarvisLine, Seg, Stepper } from '../../ui/controls'
 import { formatKg, formatRange } from '../../ui/format'
 import { RestBar } from './RestBar'
 import { Stopwatch } from './Stopwatch'
@@ -198,6 +199,8 @@ export function Work({ plan, session, resolved, review = false, onFinish, onLeav
 
         {item.logType === 'checklist' ? (
           <Checklist session={session} item={item} />
+        ) : item.freeChoice && !item.freeName ? (
+          <FreeChoice session={session} item={item} suggestions={freeNameSuggestions(allSets, item.exerciseId)} />
         ) : (
           <SetEntry
             key={item.index}
@@ -264,6 +267,46 @@ export function Work({ plan, session, resolved, review = false, onFinish, onLeav
           <p>Warum entfällt „{skipFor.name}“? Die Sätze fehlen dann bei den 80 %.</p>
         </Dialog>
       )}
+    </div>
+  )
+}
+
+/** Freie Übungswahl: Name vor dem ersten Satz eingeben, frühere Namen als Vorschlag. */
+function FreeChoice({ session, item, suggestions }: { session: SessionLog; item: ResolvedItem; suggestions: string[] }) {
+  const [name, setName] = useState('')
+  const [line] = useState(() => say('freeChoicePrompt'))
+  const valid = name.trim().length >= 2
+  const choose = (n: string) => void setFreeName(session, item.index, n)
+  return (
+    <div className={m.entry}>
+      <p className={m.entryTitle}>Übung wählen</p>
+      <JarvisLine text={line} />
+      {suggestions.length > 0 && (
+        <div className={s.stack}>
+          {suggestions.slice(0, 5).map((n) => (
+            <Button key={n} block onClick={() => choose(n)}>
+              {n}
+            </Button>
+          ))}
+        </div>
+      )}
+      <input
+        className={s.input}
+        type="text"
+        aria-label="Übungsname"
+        placeholder={suggestions.length ? 'Oder neue Übung …' : 'Übungsname'}
+        autoComplete="off"
+        autoCapitalize="sentences"
+        enterKeyHint="done"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && valid) choose(name)
+        }}
+      />
+      <Button variant="primary" block disabled={!valid} onClick={() => choose(name)}>
+        Übung übernehmen
+      </Button>
     </div>
   )
 }

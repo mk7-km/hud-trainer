@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { db, USER_TABLES, type TrainerDb, type UserTable } from './db'
+import type { PlanRules } from '../domain/plan'
+import { db, RULES_PREFIX, USER_TABLES, type PlanCacheRow, type TrainerDb, type UserTable } from './db'
 
 export const BACKUP_SCHEMA_VERSION = 1
 const APP_TAG = 'hud-trainer'
@@ -11,10 +12,13 @@ const backupSchema = z.object({
   exportedAt: z.string(),
   planVersion: z.string().nullable(),
   tables: z.record(z.string(), z.array(row)),
+  /** Regel-Archiv je Planversion (ab App 1.1), damit alte Wochen auf einem neuen Gerät gleich zählen. */
+  planRules: z.array(row).optional(),
 })
 
-export type Backup = Omit<z.infer<typeof backupSchema>, 'tables'> & {
+export type Backup = Omit<z.infer<typeof backupSchema>, 'tables' | 'planRules'> & {
   tables: Record<UserTable, Record<string, unknown>[]>
+  planRules: PlanRules[]
 }
 
 type RawBackup = z.infer<typeof backupSchema>
@@ -29,12 +33,14 @@ export async function exportBackup(planVersion: string | null, database: Trainer
   await database.transaction('r', USER_TABLES.map((t) => database[t]), async () => {
     for (const t of USER_TABLES) tables[t] = (await database[t].toArray()) as unknown as Record<string, unknown>[]
   })
+  const archive = await database.planCache.where('id').startsWith(RULES_PREFIX).toArray()
   return {
     app: APP_TAG,
     schemaVersion: BACKUP_SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
     planVersion,
     tables,
+    planRules: archive.flatMap((r) => (r.rules ? [r.rules] : [])),
   }
 }
 
@@ -96,10 +102,11 @@ export function parseBackup(
     tables[t] = rows
   }
 
+  const planRules = (data.planRules ?? []).filter((r): r is Record<string, unknown> & PlanRules => typeof r.planVersion === 'string' && typeof r.pflichtPerWeek === 'number')
   const dates = tables.sessions.map((s) => String(s.date)).sort()
   return {
     ok: true,
-    backup: { ...data, tables },
+    backup: { ...data, tables, planRules },
     summary: {
       exportedAt: data.exportedAt,
       planVersion: data.planVersion,
@@ -120,6 +127,14 @@ export async function importBackup(backup: Backup, database: TrainerDb = db): Pr
       await (database[t] as unknown as { bulkPut(rows: unknown[]): Promise<unknown> }).bulkPut(backup.tables[t])
     }
   })
+  // Regel-Archiv ergänzen, vorhandene Versionen nicht überschreiben.
+  for (const rules of backup.planRules) {
+    const id = RULES_PREFIX + rules.planVersion
+    if (!(await database.planCache.get(id))) {
+      const rowData: PlanCacheRow = { id, planVersion: rules.planVersion, raw: null, storedAt: Date.now(), rules }
+      await database.planCache.put(rowData)
+    }
+  }
 }
 
 export async function wipeUserData(database: TrainerDb = db): Promise<void> {

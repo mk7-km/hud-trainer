@@ -35,6 +35,9 @@ const exerciseFields = {
   maxKneeFlexionDeg: z.number().optional(),
   hint: z.string().optional(),
   checklist: z.array(checklistItem).optional(),
+  /** Nutzer gibt den Übungsnamen in der Einheit ein; Verlauf läuft pro Name. */
+  freeChoice: z.boolean().optional(),
+  freeChoiceRules: z.string().optional(),
 }
 
 const overrideSchema = z.object(exerciseFields).partial()
@@ -62,7 +65,7 @@ const sessionSchema = z.object({
   order: z.number(),
   name: z.string(),
   type: z.enum(['pflicht', 'bonus']),
-  focus: z.enum(['lower', 'upper', 'cardio']),
+  focus: z.enum(['lower', 'upper', 'core', 'cardio']),
   suggestedWeekday: z.string().optional(),
   durationMin: z.number().optional(),
   warmup: z.array(z.string()),
@@ -93,6 +96,17 @@ const criterionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('selfCheck'), id: z.string(), text: z.string() }),
 ])
 
+const spacingRuleSchema = z
+  .object({
+    id: z.string(),
+    sessions: z.array(z.string()).min(2),
+    minHours: z.number().positive().optional(),
+    notOnConsecutiveDays: z.boolean().optional(),
+    severity: z.enum(['confirm', 'info']).optional(),
+    text: z.string().optional(),
+  })
+  .refine((r) => r.minHours !== undefined || r.notOnConsecutiveDays === true, { message: 'Abstandsregel ohne Bedingung' })
+
 /** Fragen-IDs, auf die sich die Ampel-Ableitung stützt (siehe DECISIONS.md). */
 export const KNEE_QUESTION_IDS = ['swelling', 'pain', 'stiffness', 'givingWay48h', 'locking'] as const
 
@@ -101,6 +115,14 @@ export const planSchema = z
     schemaVersion: z.literal(1),
     planVersion: z.string(),
     planId: z.string(),
+    approvedBy: z.string().optional(),
+    approval: z
+      .object({
+        basedOn: z.string().optional(),
+        changesReviewedByPhysio: z.boolean().optional(),
+        note: z.string().optional(),
+      })
+      .optional(),
     phase: z.object({ id: z.string(), name: z.string(), type: z.string() }),
     legend: z.record(z.string(), z.string()).optional(),
     globalRules: z
@@ -114,8 +136,13 @@ export const planSchema = z
       weekStartsOn: z.literal('monday'),
       timezone: z.string(),
       pflichtPerWeek: z.number().int().positive(),
-      bonusPerWeek: z.number().int().min(0),
-      minHoursBetweenLowerSessions: z.number().min(0),
+      bonusPerWeek: z.number().int().min(0).optional(),
+      /** Plan 1.0; ab 1.1 ersetzt durch spacingRules. */
+      minHoursBetweenLowerSessions: z.number().min(0).optional(),
+      fixedWeekdays: z.boolean().optional(),
+      recommendedOrder: z.array(z.string()).optional(),
+      eachSessionPerWeek: z.number().int().positive().optional(),
+      spacingRules: z.array(spacingRuleSchema).optional(),
       weeks: z
         .array(
           z.object({
@@ -144,7 +171,7 @@ export const planSchema = z
       questions: z.array(questionSchema),
       green: z.object({ action: z.string() }),
       yellow: z.object({ action: z.string(), loadFactor: z.number().positive().max(1) }),
-      red: z.object({ action: z.string() }),
+      red: z.object({ action: z.string(), suspendedCountsAsFulfilled: z.boolean().optional() }),
       events: z.object({ givingWay: z.string(), locking: z.string() }),
     }),
     progression: z.object({ technique: z.string().optional() }).optional(),
@@ -157,11 +184,11 @@ export const planSchema = z
     }),
     points: z.object({
       pflichtSession: z.number(),
-      bonusSession: z.number(),
+      bonusSession: z.number().optional(),
       weekAllPflicht: z.number(),
-      perfectWeekExtra: z.number(),
+      perfectWeekExtra: z.number().optional(),
       newRightLegRecord: z.number(),
-      redReplacementMobility: z.number(),
+      redReplacementMobility: z.number().optional(),
       sessionCompleteThreshold: z.number().min(0).max(1),
     }),
     marks: z.array(
@@ -199,6 +226,15 @@ export const planSchema = z
     for (const id of KNEE_QUESTION_IDS) {
       if (!qids.has(id)) ctx.addIssue({ code: 'custom', message: `kneeCheck: Frage ${id} fehlt` })
     }
+    const sessionIds = new Set(plan.sessions.map((s) => s.id))
+    for (const rule of plan.schedule.spacingRules ?? []) {
+      for (const id of rule.sessions) {
+        if (!sessionIds.has(id)) ctx.addIssue({ code: 'custom', message: `spacingRules.${rule.id}: unbekannte Einheit ${id}` })
+      }
+    }
+    for (const id of plan.schedule.recommendedOrder ?? []) {
+      if (!sessionIds.has(id)) ctx.addIssue({ code: 'custom', message: `recommendedOrder: unbekannte Einheit ${id}` })
+    }
     const levels = plan.marks.map((m) => m.level)
     if (levels.some((l, i) => l !== i + 1)) {
       ctx.addIssue({ code: 'custom', message: 'marks: Stufen müssen lückenlos ab 1 aufsteigen' })
@@ -211,6 +247,50 @@ export type PlanSession = z.infer<typeof sessionSchema>
 export type PlanItem = z.infer<typeof itemSchema>
 export type MarkCriterion = z.infer<typeof criterionSchema>
 export type LogType = PlanExercise['logType']
+export type SpacingRule = z.infer<typeof spacingRuleSchema>
+
+/**
+ * Regeln eines Plans, die für die Bewertung vergangener Wochen gebraucht werden. Wird je planVersion
+ * archiviert, damit Wochen vor einem Planwechsel nach den damals gültigen Regeln zählen.
+ */
+export interface PlanRules {
+  planVersion: string
+  pflichtPerWeek: number
+  bonusPerWeek: number
+  pflichtSession: number
+  bonusSession: number
+  weekAllPflicht: number
+  perfectWeekExtra: number
+  redReplacementMobility: number
+  suspendedCountsAsFulfilled: boolean
+}
+
+export function rulesOf(plan: Plan): PlanRules {
+  const p = plan.points
+  return {
+    planVersion: plan.planVersion,
+    pflichtPerWeek: plan.schedule.pflichtPerWeek,
+    bonusPerWeek: plan.schedule.bonusPerWeek ?? 0,
+    pflichtSession: p.pflichtSession,
+    bonusSession: p.bonusSession ?? 0,
+    weekAllPflicht: p.weekAllPflicht,
+    perfectWeekExtra: p.perfectWeekExtra ?? 0,
+    redReplacementMobility: p.redReplacementMobility ?? p.bonusSession ?? 0,
+    suspendedCountsAsFulfilled: plan.kneeCheck.red.suspendedCountsAsFulfilled ?? true,
+  }
+}
+
+/** Archiv der Regeln je planVersion; fehlt eine Version, gelten die Regeln des aktuellen Plans. */
+export type RulesArchive = Record<string, PlanRules>
+
+/** Abstandsregeln; ein Plan 1.0 mit minHoursBetweenLowerSessions wird in eine Regel übersetzt. */
+export function spacingRules(plan: Plan): SpacingRule[] {
+  if (plan.schedule.spacingRules) return plan.schedule.spacingRules
+  const hours = plan.schedule.minHoursBetweenLowerSessions
+  if (hours === undefined) return []
+  const lower = plan.sessions.filter((s) => s.focus === 'lower').map((s) => s.id)
+  return lower.length >= 2 ? [{ id: 'legacy_lower', sessions: lower, minHours: hours, severity: 'confirm' }] : []
+}
 
 export type ParsePlanResult = { ok: true; plan: Plan } | { ok: false; errors: string[] }
 

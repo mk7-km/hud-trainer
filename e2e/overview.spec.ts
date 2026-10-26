@@ -39,15 +39,43 @@ test('Übersichten mit Beispieldaten, Korrektur, Löschen und Wiederherstellen',
   await shot(page, 'm4-markup')
   await page.getByRole('button', { name: 'Weiter' }).click()
 
-  // HOME
+  // HOME: Reaktor ohne Bonussegmente, Empfehlung nach recommendedOrder (Unterkörper B, 48 h nach Montag erfüllt)
   await expect(page.getByText('Nächste Mission')).toBeVisible()
-  await expect(page.getByRole('img', { name: /2 von 4 Pflichteinheiten/ })).toBeVisible()
+  await expect(page.getByRole('img', { name: /^Wochenenergie: 2 von 4 Pflichteinheiten$/ })).toBeVisible()
   await expect(page.getByText('OP in 64 T')).toBeVisible()
+  await expect(page.getByText('Unterkörper B · ca. 55 min')).toBeVisible()
   await shot(page, 'm3-home')
 
-  // WOCHE
+  // Freie Übungswahl: Rumpf starten, zur Bauchübung springen, Namen wählen, Satz speichern
+  await page.getByRole('button', { name: 'WOCHE' }).click()
+  await page.getByRole('button', { name: 'Rumpf starten' }).click()
+  await page.getByRole('radio', { name: 'keine' }).click()
+  await page.getByRole('radio', { name: 'Schmerz 0' }).click()
+  for (const group of ['Auffällige Morgensteifigkeit der Sehne?', 'Wegknicken in den letzten 48 Stunden?', 'Blockade oder Einklemmen?']) {
+    await page.getByRole('radiogroup', { name: group }).getByRole('radio', { name: 'nein' }).click()
+  }
+  await page.getByRole('button', { name: 'Knie-Check abschließen' }).click()
+  await page.getByRole('button', { name: 'Weiter' }).click()
+  await page.getByRole('button', { name: 'Zur Übersicht' }).click()
+  await page.getByRole('button', { name: /Bauch \(freie Wahl\)/ }).click()
+  await expect(page.getByText('Welche Bauchübung, Sir?')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Crunch am Kabel' })).toBeVisible()
+  await shot(page, 'v11-free-choice')
+  await page.getByRole('textbox', { name: 'Übungsname' }).fill('Plank mit Gewicht')
+  await page.getByRole('button', { name: 'Übung übernehmen' }).click()
+  await expect(page.getByRole('heading', { name: 'Plank mit Gewicht' })).toBeVisible()
+  await page.getByRole('textbox', { name: 'Gewicht' }).fill('10')
+  await page.getByRole('button', { name: 'Satz speichern' }).click()
+  await expect(page.getByText('10,0 kg × 10')).toBeVisible()
+  await page.getByRole('button', { name: 'Zur Übersicht' }).click()
+  await page.getByRole('button', { name: 'Später fortsetzen' }).click()
+  await page.getByRole('button', { name: 'HOME' }).click()
+  await expect(page.getByText('Laufende Mission')).toBeVisible()
+
+  // WOCHE: Rumpf läuft, Unterkörper B offen
   await page.getByRole('button', { name: 'WOCHE' }).click()
   await expect(page.getByText(/Woche 8 · Block 2/)).toBeVisible()
+  await expect(page.getByRole('button', { name: /Rumpf vom 11\.11\. öffnen/ })).toContainText('läuft')
   await expect(page.getByText('Verlauf')).toBeVisible()
   await shot(page, 'm3-week')
 
@@ -69,6 +97,8 @@ test('Übersichten mit Beispieldaten, Korrektur, Löschen und Wiederherstellen',
   await page.getByRole('textbox', { name: 'Gewicht' }).fill('89,9')
   await page.getByRole('button', { name: 'Wägung speichern' }).click()
   await expect(page.getByText('11.11.2026 · 89,9 kg')).toBeVisible()
+  // Übungsverlauf kennt die freie Übung unter ihrem Namen
+  await expect(page.getByRole('combobox')).toContainText('Plank mit Gewicht')
 
   // Abgeschlossene Einheit öffnen und einen Satz korrigieren (rechtes Bein drastisch schwächer → Bestwert-Bonus entfällt)
   await page.getByRole('button', { name: 'WOCHE' }).click()

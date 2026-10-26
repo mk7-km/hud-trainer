@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie'
+import type { PlanRules } from '../domain/plan'
 import {
   DEFAULT_SETTINGS,
   type BodyweightLog,
@@ -11,12 +12,16 @@ import {
   type Settings,
 } from '../domain/types'
 
+/** 'lastValid' = zuletzt gültig geladener Plan; 'v:<planVersion>' = Regel-Archiv je Version. */
 export interface PlanCacheRow {
-  id: 'lastValid'
+  id: string
   planVersion: string
   raw: unknown
   storedAt: number
+  rules?: PlanRules
 }
+
+export const RULES_PREFIX = 'v:'
 
 export class TrainerDb extends Dexie {
   settings!: Table<Settings, string>
@@ -27,7 +32,7 @@ export class TrainerDb extends Dexie {
   kneeEvents!: Table<KneeEvent, string>
   bodyweight!: Table<BodyweightLog, string>
   marksReached!: Table<MarkReached, number>
-  /** Letzter gültiger Plan. Kein Nutzerdatum, nicht Teil des Backups. */
+  /** Letzter gültiger Plan und Regel-Archiv je Planversion. Das Archiv wandert mit ins Backup. */
   planCache!: Table<PlanCacheRow, string>
 
   constructor(name = 'hud-trainer') {

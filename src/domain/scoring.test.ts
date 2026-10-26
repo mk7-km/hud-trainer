@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { average7, losingTooFast, weeklyTrend, weighInsThisWeek } from './bodyweight'
 import { advanceMarks, calmDays, evaluateMark, type MarkFacts } from './marks'
+import type { RulesArchive } from './plan'
 import { completionRatio, doneUnits, finishStatus, points, streaks, weekSummary } from './scoring'
 import { baseline, baselineCaptured, bestE1rm, e1rm, rightGain, rightGainExercises, rightRecords, symmetry } from './strength'
 import { fullWeek, makeSession, makeSets } from './testkit'
@@ -8,9 +9,24 @@ import { loadTestPlan } from './testplan.node'
 import type { BodyweightLog, CheckLog, KneeCheckLog, KneeEvent, SessionLog, SetLog } from './types'
 
 const plan = loadTestPlan()
-const PFLICHT = ['lower_a', 'upper_a', 'lower_b', 'upper_b']
+const PFLICHT = ['lower_a', 'upper', 'lower_b', 'core']
 const START = '2026-09-21'
 const settings = { programStart: START, opDate: null, repairSince: null }
+
+/** Regeln des Plans 1.0 (zwei Bonuseinheiten, perfekte Woche), wie sie das Archiv liefert. */
+const ARCHIVE_V1: RulesArchive = {
+  '1.0.0': {
+    planVersion: '1.0.0',
+    pflichtPerWeek: 4,
+    bonusPerWeek: 2,
+    pflichtSession: 100,
+    bonusSession: 50,
+    weekAllPflicht: 200,
+    perfectWeekExtra: 100,
+    redReplacementMobility: 50,
+    suspendedCountsAsFulfilled: true,
+  },
+}
 
 describe('e1RM', () => {
   const s = makeSession({ date: '2026-09-22' })
@@ -102,17 +118,25 @@ describe('Punkte und Wochen', () => {
   const monday = '2026-09-28'
   const week = fullWeek(monday, PFLICHT)
 
-  it('volle Woche: 4 × 100 + 200', () => {
-    expect(weekSummary(plan, week, monday)).toMatchObject({ pflichtDone: 4, full: true, perfect: false, pct: 100 })
+  it('volle Woche: 4 × 100 + 200, keine Bonussegmente', () => {
+    expect(weekSummary(plan, week, monday)).toMatchObject({ pflichtDone: 4, bonusTarget: 0, bonusDone: 0, full: true, perfect: false, pct: 100 })
     expect(points(plan, week, []).total).toBe(600)
   })
 
-  it('perfekte Woche: + 2 × 50 + 100', () => {
+  it('Wochen aus Plan 1.0 zählen nach den damaligen Regeln (Archiv): Bonus und perfekte Woche', () => {
+    const old = fullWeek(monday, ['lower_a', 'upper_a', 'lower_b', 'upper_b'], { planVersion: '1.0.0' })
     const bonus = ['bonus_bike_mobility', 'bonus_swim_bike'].map((id, i) =>
-      makeSession({ date: i ? '2026-10-03' : '2026-09-30', sessionTemplateId: id, sessionType: 'bonus', focus: 'cardio' }),
+      makeSession({ date: i ? '2026-10-03' : '2026-09-30', sessionTemplateId: id, sessionType: 'bonus', focus: 'cardio', planVersion: '1.0.0' }),
     )
-    expect(weekSummary(plan, [...week, ...bonus], monday).perfect).toBe(true)
-    expect(points(plan, [...week, ...bonus], []).total).toBe(800)
+    const all = [...old, ...bonus]
+    expect(weekSummary(plan, all, monday, ARCHIVE_V1)).toMatchObject({ bonusTarget: 2, bonusDone: 2, perfect: true })
+    expect(points(plan, all, [], ARCHIVE_V1).total).toBe(800)
+    // die laufende Woche zählt immer nach dem aktuellen Plan, auch wenn ihre Einheiten älter sind
+    expect(weekSummary(plan, all, monday, ARCHIVE_V1, '2026-10-01')).toMatchObject({ bonusTarget: 0, perfect: false })
+    expect(weekSummary(plan, all, monday, ARCHIVE_V1, '2026-10-06')).toMatchObject({ bonusTarget: 2, perfect: true })
+    // ohne Archiv (z. B. neues Gerät ohne Backup): aktuelle Regeln, Bonus ohne Wert, Pflicht bleibt erfüllt
+    expect(weekSummary(plan, all, monday)).toMatchObject({ bonusTarget: 0, full: true, perfect: false })
+    expect(points(plan, all, []).total).toBe(600)
   })
 
   it('abgebrochene Einheiten zählen nicht, ausgesetzte ROT-Einheiten erfüllen das Wochenziel ohne Punkte', () => {
@@ -125,9 +149,10 @@ describe('Punkte und Wochen', () => {
     expect(points(plan, red, []).total).toBe(300 + 200)
   })
 
-  it('ROT-Bonuseinheit (nur Mobility) bringt redReplacementMobility', () => {
-    const s = makeSession({ date: monday, sessionTemplateId: 'bonus_bike_mobility', sessionType: 'bonus', focus: 'cardio', kneeStatus: 'red' })
-    expect(points(plan, [s], []).total).toBe(50)
+  it('ROT-Bonuseinheit aus Plan 1.0 bringt den damaligen Ersatzwert', () => {
+    const s = makeSession({ date: monday, sessionTemplateId: 'bonus_bike_mobility', sessionType: 'bonus', focus: 'cardio', kneeStatus: 'red', planVersion: '1.0.0' })
+    expect(points(plan, [s], [], ARCHIVE_V1).total).toBe(50)
+    expect(points(plan, [s], []).total).toBe(0)
   })
 
   it('dieselbe Vorlage zählt pro Woche nur einmal', () => {

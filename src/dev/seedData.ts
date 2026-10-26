@@ -2,7 +2,7 @@
 // Wird nur im Dev-Modus (SYSTEM) und in den Playwright-Tests verwendet, nie im Produktivablauf.
 import type { Backup } from '../db/backup'
 import { addDays, diffDays, mondayOf } from '../domain/dates'
-import type { Plan } from '../domain/plan'
+import { rulesOf, type Plan } from '../domain/plan'
 import { dayContext } from '../domain/schedule'
 import { resolveSession } from '../domain/sessionPlan'
 import {
@@ -24,12 +24,14 @@ export interface SeedOptions {
   opDate?: string | null
 }
 
-const WEEKDAY_OFFSET: Record<string, number> = { mon: 0, tue: 1, wed: 2, thu: 3, fri: 4, sat: 5, sun: 6 }
+/** Trainingstage je Position in der empfohlenen Reihenfolge: Mo, Di, Do, Fr (Sa, So als Reserve). */
+const DAY_SLOTS = [0, 1, 3, 4, 5, 6]
 const ANSWERS: Record<KneeStatus, Record<string, string | number>> = {
   green: { swelling: 'keine', pain: 1, stiffness: 'nein', givingWay48h: 'nein', locking: 'nein' },
   yellow: { swelling: 'leicht', pain: 3, stiffness: 'nein', givingWay48h: 'nein', locking: 'nein' },
   red: { swelling: 'deutlich', pain: 5, stiffness: 'ja', givingWay48h: 'nein', locking: 'nein' },
 }
+const FREE_NAMES = ['Crunch am Kabel', 'Beinheben hängend']
 
 export function buildSeed(plan: Plan, opts: SeedOptions): Backup {
   const programStart = addDays(mondayOf(opts.today), -7 * opts.weeksBack)
@@ -57,27 +59,33 @@ export function buildSeed(plan: Plan, opts: SeedOptions): Backup {
   const baseLoad = (exerciseId: string) => 20 + (exerciseId.length % 7) * 10
   const rightFactor = (week: number) => Math.min(0.93, 0.68 + week * 0.035)
 
-  const ordered = [...plan.sessions].sort((a, b) => a.order - b.order)
+  const byId = new Map(plan.sessions.map((t) => [t.id, t]))
+  const orderIds = plan.schedule.recommendedOrder ?? [...plan.sessions].sort((a, b) => a.order - b.order).map((t) => t.id)
+  const ordered = orderIds.map((tid) => byId.get(tid)).filter((t): t is NonNullable<typeof t> => t !== undefined)
+
   for (let day = programStart; day < opts.today; day = addDays(day, 1)) {
     const weekIndex = Math.floor(diffDays(day, programStart) / 7) // 0-basiert
     const offset = diffDays(day, mondayOf(day))
     const ctx = dayContext(plan, settings, day)
     if (ctx.locked) continue
 
-    for (const template of ordered) {
-      if (WEEKDAY_OFFSET[template.suggestedWeekday ?? ''] !== offset) continue
-      // Woche 4 (Index 3) verfehlt: Freitagseinheit fällt aus. Bonus nur in geraden Wochen komplett.
-      if (weekIndex === 3 && template.order === 5) continue
-      if (template.type === 'bonus' && weekIndex % 2 === 1 && template.order === 6) continue
+    ordered.forEach((template, pos) => {
+      if (DAY_SLOTS[pos] !== offset) return
+      // Woche 4 (Index 3) verfehlt: die letzte Einheit der Woche fällt aus.
+      if (weekIndex === 3 && pos === ordered.length - 1) return
 
       // Ein Gelb-Tag (Woche 3, Donnerstag) und ein Rot-Tag (Woche 6, Montag)
       const knee: KneeStatus = weekIndex === 2 && offset === 3 ? 'yellow' : weekIndex === 5 && offset === 0 ? 'red' : 'green'
       const choices: Record<string, string> = {}
+      const freeNames: Record<string, string> = {}
       template.items.forEach((item, i) => {
         if (item.chooseOne) choices[String(i)] = item.chooseOne[weekIndex % item.chooseOne.length]!
+        if (item.exerciseId && plan.exercises[item.exerciseId]?.freeChoice) {
+          freeNames[String(i)] = FREE_NAMES[(weekIndex + pos) % FREE_NAMES.length]!
+        }
       })
-      const resolved = resolveSession(plan, template.id, ctx, knee, choices)
-      const startedAt = at(day, 16)
+      const resolved = resolveSession(plan, template.id, ctx, knee, choices, freeNames)
+      const startedAt = at(day, 15)
       const session: SessionLog = {
         id: id('s'),
         sessionTemplateId: template.id,
@@ -96,6 +104,7 @@ export function buildSeed(plan: Plan, opts: SeedOptions): Backup {
         kneeStatus: knee,
         plannedUnits: resolved.plannedUnits,
         choices,
+        freeNames,
         skipped: [],
       }
       sessions.push(session)
@@ -152,7 +161,7 @@ export function buildSeed(plan: Plan, opts: SeedOptions): Backup {
           }
         }
       }
-    }
+    })
 
     // Wägungen: Montag, Mittwoch, Samstag; langsamer Trend nach unten
     if (offset === 0 || offset === 2 || offset === 5) {
@@ -180,5 +189,6 @@ export function buildSeed(plan: Plan, opts: SeedOptions): Backup {
       bodyweight: bodyweight as unknown as Record<string, unknown>[],
       marksReached: [],
     },
+    planRules: [rulesOf(plan)],
   }
 }
